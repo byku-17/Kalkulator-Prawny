@@ -1,6 +1,14 @@
 import streamlit as st
 from datetime import date
 from dateutil.relativedelta import relativedelta
+from obliczenia import (
+    analiza_cywilna,
+    analiza_karna,
+    analiza_zatarcia,
+    WynikAnalizyCywilnej,
+    WynikAnalizyKarne,
+    WynikAnalizyZatarcia,
+)
 
 # Ustawienia strony
 st.set_page_config(page_title="Analiza prawna i windykacyjna", layout="wide")
@@ -145,109 +153,6 @@ with col2:
 st.divider()
 
 # ─────────────────────────────────────────────
-# 3. FUNKCJE POMOCNICZE I ANALITYCZNE
-# ─────────────────────────────────────────────
-def dodaj_lata(d: date, lata: int) -> date:
-    if d is None: return None
-    return d + relativedelta(years=lata)
-
-def analiza_cywilna(data_bazowa, wplata, wyrok, wszcz_egz, umor_egz, lata_baza, podstawa, czy_jest_delikt):
-    wyniki, daty_kluczowe = [], {}
-    dzis = date.today()
-
-    if data_bazowa is None:
-        return ["⚠️ Brak daty bazowej – analiza cywilna niemożliwa."], daty_kluczowe
-
-    if wyrok:
-        lata_cywil, aktualna_podstawa, start_cywil = 6, "Art. 125 § 1 k.c. (wyrok)", wyrok
-    else:
-        lata_cywil, aktualna_podstawa, start_cywil = lata_baza, podstawa, data_bazowa
-
-    if wplata:
-        if wyrok and wplata > wyrok:
-            wyniki.append("ℹ️ **Uwaga:** Zarejestrowano wpłatę po dacie prawomocnego wyroku. Wpłata może mieć znaczenie dla oceny uznania roszczenia, ale nie przesądza automatycznie o skutkach przedawnieniowych.")
-            start_cywil = wplata
-        elif not wyrok and wplata > start_cywil:
-            wyniki.append("ℹ️ **Uwaga:** Zarejestrowano wpłatę / uznanie długu. Może to stanowić uznanie roszczenia i przerwać bieg przedawnienia, ale skutek zależy od okoliczności sprawy.")
-            start_cywil = wplata
-
-    if umor_egz and umor_egz > start_cywil:
-        start_cywil = umor_egz
-        wyniki.append("ℹ️ **Uwaga:** Po prawomocnym umorzeniu egzekucji bieg przedawnienia co do zasady biegnie na nowo od tej daty.")
-
-    if wszcz_egz is not None and umor_egz is None:
-        wyniki.append("⏸️ **Egzekucja w toku:** Wszczęcie egzekucji przerwało bieg przedawnienia. Zgodnie z art. 124 § 2 k.c. przedawnienie nie biegnie na nowo, dopóki postępowanie nie zostanie prawomocnie zakończone.")
-    else:
-        termin_podstawowy = dodaj_lata(start_cywil, lata_cywil)
-        po_nowelizacji = start_cywil >= date(2018, 7, 9)
-        to_czysty_delikt = (czy_jest_delikt and not wyrok)
-        
-        if po_nowelizacji and not to_czysty_delikt:
-            termin_ostateczny = date(termin_podstawowy.year, 12, 31)
-            adnotacja_3112 = " (przesunięto na koniec roku - art. 118 k.c.)"
-        else:
-            termin_ostateczny = termin_podstawowy
-            adnotacja_3112 = " (bez reguły na koniec roku)"
-
-        daty_kluczowe[f"Przedawnienie cywilne [{aktualna_podstawa}]"] = termin_ostateczny
-        if termin_ostateczny >= dzis:
-            wyniki.append(f"✅ **Brak przedawnienia cywilnego:** roszczenie ważne do {termin_ostateczny.strftime('%d.%m.%Y')}{adnotacja_3112}.")
-        else:
-            wyniki.append(f"❌ **Przedawnienie cywilne:** termin upłynął {termin_ostateczny.strftime('%d.%m.%Y')}{adnotacja_3112}.")
-
-    return wyniki, daty_kluczowe
-
-def analiza_karna(data_czynu_karna, lata_karne, data_wszcz_k, data_umor_k):
-    wyniki, daty_kluczowe = [], {}
-    dzis = date.today()
-
-    if data_czynu_karna is None:
-        wyniki.append("⚠️ **Brak daty czynu:** nie można obliczyć przedawnienia karalności bez daty popełnienia czynu.")
-        return wyniki, daty_kluczowe
-
-    termin_karny = dodaj_lata(data_czynu_karna, lata_karne)
-
-    if data_wszcz_k:
-        if data_wszcz_k <= termin_karny:
-            termin_karny = dodaj_lata(termin_karny, 10)
-            wyniki.append("ℹ️ **Art. 102 k.k.:** Wszczęto postępowanie przed upływem przedawnienia. Karalność czynu wydłuża się o 10 lat.")
-        else:
-            wyniki.append("❌ **Uwaga:** Postępowanie karne wszczęto po pierwotnym upływie terminu przedawnienia karalności.")
-    else:
-        wyniki.append("ℹ️ **Art. 102 k.k.:** Brak daty wszczęcia. Wyliczenia nie uwzględniają ewentualnego przedłużenia o 10 lat.")
-
-    if data_umor_k:
-        wyniki.append(f"ℹ️ **Umorzenie:** Postępowanie umorzono ({data_umor_k.strftime('%d.%m.%Y')}). Opcja podjęcia go na nowo zależy od podstaw prawnych umorzenia.")
-
-    daty_kluczowe["* Orientacyjne ustanie karalności (Art. 101/102 k.k.)"] = termin_karny
-    if termin_karny >= dzis:
-        wyniki.append("⚠️ **Karalność trwa:** Zawiadomienie organów ścigania / kontynuowanie sprawy jest prawnie możliwe.")
-    else:
-        wyniki.append("❌ **Karalność wygasła:** Organy z urzędu odmówią wszczęcia lub umorzą postępowanie (przedawnienie).")
-
-    return wyniki, daty_kluczowe
-
-def analiza_zatarcia(data_wyroku_k, data_wykonania, lata_zat):
-    wyniki, daty_kluczowe = [], {}
-    dzis = date.today()
-
-    if data_wyroku_k is None: return wyniki, daty_kluczowe
-
-    if data_wykonania:
-        termin_zatarcia, baza_zatarcia = dodaj_lata(data_wykonania, lata_zat), "od wykonania/darowania kary"
-    else:
-        termin_zatarcia, baza_zatarcia = dodaj_lata(data_wyroku_k, lata_zat), "od wyroku (orientacyjnie)"
-        wyniki.append("⚠️ **OSTRZEŻENIE:** Zatarcie wyliczono orientacyjnie od daty wyroku, ponieważ nie wprowadzono daty wykonania kary.")
-
-    daty_kluczowe["* Orientacyjne zatarcie skazania"] = termin_zatarcia
-    if termin_zatarcia < dzis:
-        wyniki.append(f"✅ **Zatarcie skazania:** Prawdopodobnie nastąpiło {termin_zatarcia.strftime('%d.%m.%Y')} ({baza_zatarcia}).")
-    else:
-        wyniki.append(f"⚠️ **Zatarcie skazania:** Skazanie prawdopodobnie nadal widnieje w KRK (orientacyjnie: {termin_zatarcia.strftime('%d.%m.%Y')}).")
-
-    return wyniki, daty_kluczowe
-
-# ─────────────────────────────────────────────
 # 4. WALIDACJA DANYCH WEJŚCIOWYCH
 # ─────────────────────────────────────────────
 def waliduj_dane(
@@ -328,58 +233,134 @@ if st.button("Przeprowadź analizę", type="primary"):
     for ost in ostrzezenia:
         st.warning(ost)
 
-    # --- Analiza cywilna (tylko jeśli są dane cywilne) ---
-    wyniki_cywilne, daty_kluczowe_cywilne = [], {}
+    data_oceny = date.today()
+
+    # --- Analiza cywilna ---
+    wynik_cywilny: WynikAnalizyCywilnej
     if data_bazowa_cywilna is not None:
-        wyniki_cywilne, daty_kluczowe_cywilne = analiza_cywilna(
+        wynik_cywilny = analiza_cywilna(
             data_bazowa_cywilna, ostatnia_wplata, data_wyroku_cywilnego,
             data_wszcz_egzekucji, data_umor_egzekucji,
-            lata_cywilne_baza, podstawa_cywilna, czy_delikt
+            lata_cywilne_baza, podstawa_cywilna, czy_delikt,
+            data_oceny
         )
     else:
-        wyniki_cywilne = ["ℹ️ **Analiza cywilna pominięta:** Brak daty bazowej (wymagalności / dowiedzenia się o szkodzie)."]
+        wynik_cywilny = WynikAnalizyCywilnej(
+            bledy=[],
+            ostrzezenia=["Analiza cywilna pominięta: brak daty bazowej (wymagalności / dowiedzenia się o szkodzie)."]
+        )
 
-    # --- Analiza karna (tylko jeśli są dane karne) ---
-    wyniki_karne, daty_kluczowe_karne = [], {}
+    # --- Analiza karna ---
+    wynik_karny: WynikAnalizyKarne
     if data_czynu is not None:
-        wyniki_karne, daty_kluczowe_karne = analiza_karna(
-            data_czynu, OPCJE_KK[wybor_kk], wszczecie_k, umorzenie_k
+        wynik_karny = analiza_karna(
+            data_czynu, OPCJE_KK[wybor_kk], wszczecie_k, umorzenie_k,
+            data_oceny
         )
     else:
-        wyniki_karne.append("ℹ️ **Analiza karna pominięta:** Brak daty popełnienia czynu.")
+        wynik_karny = WynikAnalizyKarne(
+            bledy=[],
+            ostrzezenia=["Analiza karna pominięta: brak daty popełnienia czynu."]
+        )
 
-    # --- Analiza zatarcia (tylko jeśli jest wyrok) ---
-    wyniki_zatarcia, daty_kluczowe_zatarcia = [], {}
+    # --- Analiza zatarcia ---
+    wynik_zatarcia: WynikAnalizyZatarcia
     if wyrok_k is not None:
-        wyniki_zatarcia, daty_kluczowe_zatarcia = analiza_zatarcia(
-            wyrok_k, data_wykonania_kary, OPCJE_ZATARCIA[wybor_zatarcia]
+        wynik_zatarcia = analiza_zatarcia(
+            wyrok_k, data_wykonania_kary, OPCJE_ZATARCIA[wybor_zatarcia],
+            data_oceny
         )
     else:
-        wyniki_zatarcia.append("ℹ️ **Analiza zatarcia pominięta:** Brak daty wyroku skazującego.")
+        wynik_zatarcia = WynikAnalizyZatarcia(
+            bledy=[],
+            ostrzezenia=["Analiza zatarcia pominięta: brak daty wyroku skazującego."]
+        )
 
-    wszystkie_daty_kluczowe = {**daty_kluczowe_cywilne, **daty_kluczowe_karne, **daty_kluczowe_zatarcia}
+    # Zbierz wszystkie daty do karty
+    wszystkie_wyniki = wynik_cywilny.wyniki + wynik_karny.wyniki + wynik_zatarcia.wyniki
+    wszystkie_wyniki.sort()  # sortowanie po terminie
+
+    # Raport błędów i ostrzeżeń z modułów
+    for w in wynik_cywilny.bledy: st.error(w)
+    for w in wynik_karny.bledy: st.error(w)
+    for w in wynik_zatarcia.bledy: st.error(w)
 
     st.markdown("---")
     col_res1, col_res2 = st.columns([1.2, 1])
 
     with col_res1:
         st.subheader("📋 Wyniki analizy cywilnej")
-        for w in wyniki_cywilne: st.markdown(w)
+        if wynik_cywilny.wyniki:
+            for w in wynik_cywilny.wyniki:
+                # Główna informacja
+                if w.status == "OK":
+                    st.success(f"✅ **{w.nazwa}**: {w.termin.strftime('%d.%m.%Y')}")
+                elif w.status == "PRZEDAWNIONE":
+                    st.error(f"❌ **{w.nazwa}**: {w.termin.strftime('%d.%m.%Y')}")
+                elif w.status == "W_TOKU":
+                    st.info(f"⏸️ **{w.nazwa}**: Egzekucja w toku")
+                
+                # Podstawa prawna
+                st.caption(f"📜 {w.podstawa_prawna}")
+                
+                # Założenia
+                if w.zalozenia:
+                    with st.expander("🔍 Założenia i przebieg obliczeń"):
+                        for z in w.zalozenia:
+                            st.write(f"• {z}")
+                
+                # Ostrzeżenia
+                for o in w.ostrzezenia:
+                    if o.startswith("OSTRZEŻENIE") or o.startswith("Wpłata po") or o.startswith("Zarejestrowano"):
+                        st.warning(o)
+                    else:
+                        st.info(o)
+        else:
+            for o in wynik_cywilny.ostrzezenia:
+                st.info(o)
 
         st.subheader("⚖️ Informacje karne i KRK (orientacyjne)")
-        wszystkie_wyniki_karne = wyniki_karne + wyniki_zatarcia
-        if not wszystkie_wyniki_karne:
-            st.write("Brak wprowadzonych danych karnych.")
-        for w in wszystkie_wyniki_karne: st.markdown(w)
+        wyniki_karne_krk = wynik_karny.wyniki + wynik_zatarcia.wyniki
+        if wyniki_karne_krk:
+            for w in wyniki_karne_krk:
+                if w.status == "TRWA":
+                    st.warning(f"⚠️ **{w.nazwa}**: {w.termin.strftime('%d.%m.%Y')}")
+                elif w.status == "WYGASŁE":
+                    st.error(f"❌ **{w.nazwa}**: {w.termin.strftime('%d.%m.%Y')}")
+                elif w.status == "ZATARTE":
+                    st.success(f"✅ **{w.nazwa}**: {w.termin.strftime('%d.%m.%Y')}")
+                elif w.status == "W_KRK":
+                    st.warning(f"⚠️ **{w.nazwa}**: {w.termin.strftime('%d.%m.%Y')}")
+                
+                st.caption(f"📜 {w.podstawa_prawna}")
+                
+                if w.zalozenia:
+                    with st.expander("🔍 Założenia i przebieg obliczeń"):
+                        for z in w.zalozenia:
+                            st.write(f"• {z}")
+                
+                for o in w.ostrzezenia:
+                    if o.startswith("OSTRZEŻENIE"):
+                        st.warning(o)
+                    else:
+                        st.info(o)
+        else:
+            for o in wynik_karny.ostrzezenia + wynik_zatarcia.ostrzezenia:
+                st.info(o)
 
     with col_res2:
         st.subheader("📅 Karta dat brzegowych")
         st.caption("✅ Daty cywilne twarde | ℹ️ Daty orientacyjne karne")
-        if not wszystkie_daty_kluczowe:
+        if not wszystkie_wyniki:
             st.write("Brak wystarczających danych do wyliczenia dat.")
         
-        for k, v in wszystkie_daty_kluczowe.items():
-            if k.startswith("*"):
-                st.info(f"ℹ️ **{k.replace('* ', '')}:** {v.strftime('%d.%m.%Y')}")
+        for w in wszystkie_wyniki:
+            if w.orientacyjny:
+                st.info(f"ℹ️ **{w.nazwa}**: {w.termin.strftime('%d.%m.%Y')} [{w.status}]")
             else:
-                st.success(f"✅ **{k}:** {v.strftime('%d.%m.%Y')}")
+                if w.status == "OK":
+                    st.success(f"✅ **{w.nazwa}**: {w.termin.strftime('%d.%m.%Y')}")
+                elif w.status == "PRZEDAWNIONE":
+                    st.error(f"❌ **{w.nazwa}**: {w.termin.strftime('%d.%m.%Y')}")
+                elif w.status == "W_TOKU":
+                    st.info(f"⏸️ **{w.nazwa}**: Egzekucja w toku")
