@@ -114,15 +114,40 @@ col1, col2 = st.columns(2)
 
 with col1:
     st.subheader("Oś czasu cywilna")
-    etykieta_start_cywil = "Data dowiedzenia się o szkodzie i sprawcy" if czy_delikt else "Data zawarcia umowy / wymagalności"
     
-    data_bazowa_cywilna = st.date_input(etykieta_start_cywil, value=None, min_value=MIN_DATE, help="Data, od której pierwotnie rozpoczął się bieg przedawnienia.")
-    ostatnia_wplata = st.date_input("Data ostatniej wpłaty / uznania długu", value=None, min_value=MIN_DATE, help="Dobrowolna wpłata może stanowić tzw. niewłaściwe uznanie długu, ale skutek prawny zależy od okoliczności sprawy.")
-    data_wyroku_cywilnego = st.date_input("Data prawomocnego wyroku cywilnego / nakazu", value=None, min_value=MIN_DATE, help="Prawomocne orzeczenie sądu wyznacza odrębny reżim przedawnienia.")
+    if not czy_delikt:
+        # Umowy: osobne daty zawarcia i wymagalności
+        data_zawarcia_umowy = st.date_input("Data zawarcia umowy", value=None, min_value=MIN_DATE, help="Data podpisania umowy (dla przepisów przejściowych 2018 r.).")
+        data_wymagalnosci = st.date_input("Data wymagalności roszczenia (pierwsza zaległa rata / termin płatności)", value=None, min_value=MIN_DATE, help="Data, od której roszczenie stało się wymagalne – początek biegu przedawnienia.")
+    else:
+        # Delikty: data dowiedzenia się o szkodzie i sprawcy
+        data_zawarcia_umowy = None
+        data_wymagalnosci = st.date_input("Data dowiedzenia się o szkodzie i sprawcy", value=None, min_value=MIN_DATE, help="Data, od której biegł przedawnienie deliktowe (art. 442¹ k.c.).")
+    
+    # Wpłaty - lista dat
+    st.markdown("**Wpłaty / uznania długu** (można dodać wiele):")
+    wpłaty_input = st.text_area(
+        "Daty wpłat (po jednej w linii, format RRRR-MM-DD):",
+        value="",
+        height=100,
+        help="Każda wpłata może stanowić uznanie długu (art. 123 k.c.) i uruchamiać bieg przedawnienia od nowa."
+    )
+    # Parsowanie wpłat
+    wpłaty = []
+    if wpłaty_input.strip():
+        for linia in wpłaty_input.strip().split('\n'):
+            linia = linia.strip()
+            if linia:
+                try:
+                    wpłaty.append(date.fromisoformat(linia))
+                except ValueError:
+                    pass  # ignoruj błędne formaty
+    
+    data_wyroku_cywilnego = st.date_input("Data prawomocnego wyroku cywilnego / nakazu", value=None, min_value=MIN_DATE, help="Prawomocne orzeczenie sądu wyznacza odrębny reżim przedawnienia (6 lat od wyroku – art. 125 k.c.).")
 
     st.markdown("---")
-    data_wszcz_egzekucji = st.date_input("Data wszczęcia egzekucji", value=None, min_value=MIN_DATE, help="Data złożenia wniosku egzekucyjnego u komornika (przerywa bieg przedawnienia).")
-    data_umor_egzekucji = st.date_input("Data prawomocnego umorzenia egzekucji", value=None, min_value=MIN_DATE, help="Data uprawomocnienia się postanowienia komornika o umorzeniu.")
+    data_wszcz_egzekucji = st.date_input("Data wszczęcia egzekucji", value=None, min_value=MIN_DATE, help="Data złożenia wniosku egzekucyjnego u komornika (zawiesza bieg przedawnienia – art. 124 k.c.).")
+    data_umor_egzekucji = st.date_input("Data prawomocnego umorzenia egzekucji", value=None, min_value=MIN_DATE, help="Data uprawomocnienia się postanowienia komornika o umorzeniu (bieg od nowa – art. 124 § 2 k.c.).")
 
 with col2:
     st.subheader("Sfera karna i zatarcie (orientacyjnie)")
@@ -156,9 +181,10 @@ st.divider()
 # 4. WALIDACJA DANYCH WEJŚCIOWYCH
 # ─────────────────────────────────────────────
 def waliduj_dane(
-    data_bazowa_cywilna, ostatnia_wplata, data_wyroku_cywilnego,
-    data_wszcz_egzekucji, data_umor_egzekucji,
-    data_czynu, wszczecie_k, umorzenie_k, wyrok_k, data_wykonania_kary
+    data_zawarcia_umowy, data_wymagalnosci, wpłaty,
+    data_wyroku_cywilnego, data_wszcz_egzekucji, data_umor_egzekucji,
+    data_czynu, wszczecie_k, umorzenie_k, wyrok_k, data_wykonania_kary,
+    czy_delikt
 ) -> tuple[list[str], list[str]]:
     """
     Waliduje spójność danych.
@@ -167,21 +193,36 @@ def waliduj_dane(
     bledy = []
     ostrzezenia = []
 
-    # --- Sfera cywilna ---
+    # Sprawdzamy spójność tylko jeśli podano dane cywilne
+    if data_wymagalnosci is not None:
+        if not czy_delikt:
+            # Umowy
+            if data_zawarcia_umowy and data_wymagalnosci < data_zawarcia_umowy:
+                bledy.append("🔴 Data wymagalności nie może być wcześniejsza niż data zawarcia umowy.")
+            
+            # Wpłaty
+            for w in wpłaty:
+                if w < data_wymagalnosci:
+                    bledy.append(f"🔴 Wpłata {w.strftime('%d.%m.%Y')} nie może być wcześniejsza niż data wymagalności.")
+        else:
+            # Delikty
+            for w in wpłaty:
+                if w < data_wymagalnosci:
+                    bledy.append(f"🔴 Wpłata {w.strftime('%d.%m.%Y')} nie może być wcześniejsza niż data dowiedzenia się o szkodzie.")
+
+        # --- Wspólne dla obu (tylko jeśli jest data_wymagalnosci) ---
+        if data_wyroku_cywilnego and data_wyroku_cywilnego < data_wymagalnosci:
+            bledy.append("🔴 Wyrok cywilny nie może być wcześniejszy niż data wymagalności / dowiedzenia się o szkodzie.")
+        
+        if data_wszcz_egzekucji and data_wszcz_egzekucji < data_wymagalnosci:
+            bledy.append("🔴 Egzekucja nie może być wszczęta przed datą wymagalności / dowiedzenia się o szkodzie.")
+
+    # --- Egzekucja/umorzenie (sprawdzamy niezależnie od data_wymagalnosci) ---
     if data_wszcz_egzekucji and data_umor_egzekucji and data_umor_egzekucji < data_wszcz_egzekucji:
         bledy.append("🔴 Umorzenie egzekucji nie może nastąpić przed jej wszczęciem.")
     
     if data_wszcz_egzekucji is None and data_umor_egzekucji is not None:
         bledy.append("🔴 Umorzenie egzekucji wymaga daty wszczęcia egzekucji.")
-    
-    if data_bazowa_cywilna and data_wyroku_cywilnego and data_wyroku_cywilnego < data_bazowa_cywilna:
-        bledy.append("🔴 Wyrok cywilny nie może być wcześniejszy niż cywilna data bazowa.")
-    
-    if data_wszcz_egzekucji and data_bazowa_cywilna and data_wszcz_egzekucji < data_bazowa_cywilna:
-        bledy.append("🔴 Egzekucja nie może być wszczęta przed datą wymagalności / dowiedzenia się o szkodzie.")
-    
-    if ostatnia_wplata and data_bazowa_cywilna and ostatnia_wplata < data_bazowa_cywilna:
-        bledy.append("🔴 Data wpłaty nie może być wcześniejsza niż data bazowa.")
 
     # --- Sfera karna ---
     if data_czynu and wszczecie_k and wszczecie_k < data_czynu:
@@ -198,14 +239,10 @@ def waliduj_dane(
     
     if wyrok_k is None and data_wykonania_kary is not None:
         bledy.append("🔴 Data wykonania kary wymaga daty wyroku skazującego.")
-    
-    if wyrok_k is None and data_wykonania_kary is None and umorzenie_k is not None:
-        # Umorzenie bez wyroku jest OK (np. umorzenie na etapie postępowania)
-        pass
 
-    # --- Ostrzeżenia ---
-    if data_czynu and data_bazowa_cywilna and data_czynu > data_bazowa_cywilna:
-        ostrzezenia.append("⚠️ Data czynu jest późniejsza niż cywilna data bazowa. Sprawdź poprawność.")
+    # --- Ostrzeżenia (tylko jeśli obie daty są podane) ---
+    if data_czynu and data_wymagalnosci and data_czynu > data_wymagalnosci:
+        ostrzezenia.append("⚠️ Data czynu jest późniejsza niż cywilna data wymagalności. Sprawdź poprawność.")
 
     if data_wyroku_cywilnego and data_umor_egzekucji and data_umor_egzekucji < data_wyroku_cywilnego:
         ostrzezenia.append("⚠️ Umorzenie egzekucji jest wcześniejsze niż wyrok cywilny. Sprawdź daty.")
@@ -218,9 +255,10 @@ def waliduj_dane(
 # ─────────────────────────────────────────────
 if st.button("Przeprowadź analizę", type="primary"):
     bledy, ostrzezenia = waliduj_dane(
-        data_bazowa_cywilna, ostatnia_wplata, data_wyroku_cywilnego,
-        data_wszcz_egzekucji, data_umor_egzekucji,
-        data_czynu, wszczecie_k, umorzenie_k, wyrok_k, data_wykonania_kary
+        data_zawarcia_umowy, data_wymagalnosci, wpłaty,
+        data_wyroku_cywilnego, data_wszcz_egzekucji, data_umor_egzekucji,
+        data_czynu, wszczecie_k, umorzenie_k, wyrok_k, data_wykonania_kary,
+        czy_delikt
     )
 
     # Wyświetl wszystkie błędy naraz
@@ -237,17 +275,17 @@ if st.button("Przeprowadź analizę", type="primary"):
 
     # --- Analiza cywilna ---
     wynik_cywilny: WynikAnalizyCywilnej
-    if data_bazowa_cywilna is not None:
+    if data_wymagalnosci is not None:
         wynik_cywilny = analiza_cywilna(
-            data_bazowa_cywilna, ostatnia_wplata, data_wyroku_cywilnego,
-            data_wszcz_egzekucji, data_umor_egzekucji,
+            data_zawarcia_umowy, data_wymagalnosci, wpłaty,
+            data_wyroku_cywilnego, data_wszcz_egzekucji, data_umor_egzekucji,
             lata_cywilne_baza, podstawa_cywilna, czy_delikt,
             data_oceny
         )
     else:
         wynik_cywilny = WynikAnalizyCywilnej(
             bledy=[],
-            ostrzezenia=["Analiza cywilna pominięta: brak daty bazowej (wymagalności / dowiedzenia się o szkodzie)."]
+            ostrzezenia=["Analiza cywilna pominięta: brak daty wymagalności / dowiedzenia się o szkodzie."]
         )
 
     # --- Analiza karna ---

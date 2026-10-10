@@ -2,6 +2,26 @@ from dataclasses import dataclass, field
 from datetime import date
 from typing import Optional
 from dateutil.relativedelta import relativedelta
+from enum import Enum
+
+
+class TypZdarzenia(Enum):
+    """Typ zdarzenia wpływającego na bieg przedawnienia."""
+    START = "start"                    # początek biegu (wymagalność)
+    WPLATA = "wplata"                  # wpłata / uznanie długu (art. 123 k.c.)
+    WYSZCZ_EGZEKUCJI = "wyszcz_egzekucji"  # wszczęcie egzekucji (art. 124 k.c.)
+    UMORZENIE_EGZEKUCJI = "umorzenie_egzekucji"  # umorzenie egzekucji (art. 124 § 2 k.c.)
+    WYROK = "wyrok"                    # prawomocny wyrok (art. 125 k.c.)
+
+
+@dataclass
+class ZdarzeniePrzedawnienia:
+    """Pojedyncze zdarzenie na osi czasu przedawnienia."""
+    typ: TypZdarzenia
+    data: date
+    opis: str
+    # dla wpłat: czy to uznanie długu (art. 123 k.c.) czy po prostu wpłata
+    czy_uznanie: bool = True
 
 
 @dataclass
@@ -9,7 +29,7 @@ class WynikObliczenia:
     """Pojedynczy wynik obliczenia przedawnienia/zatarcia."""
     nazwa: str
     termin: date
-    status: str  # "OK" | "PRZEDAWNIONE" | "TRWA" | "WYGASŁE" | "BRAK_DANYCH"
+    status: str  # "OK" | "PRZEDAWNIONE" | "TRWA" | "WYGASŁE" | "BRAK_DANYCH" | "W_TOKU"
     podstawa_prawna: str
     zalozenia: list[str] = field(default_factory=list)
     ostrzezenia: list[str] = field(default_factory=list)
@@ -26,6 +46,7 @@ class WynikAnalizyCywilnej:
     bledy: list[str] = field(default_factory=list)
     ostrzezenia: list[str] = field(default_factory=list)
     zalozenia: list[str] = field(default_factory=list)
+    os_czasu: list[ZdarzeniePrzedawnienia] = field(default_factory=list)
 
 
 @dataclass
@@ -59,9 +80,30 @@ def _format_data(d: Optional[date]) -> str:
     return d.strftime("%d.%m.%Y")
 
 
+def _czy_stara_przedawnienie(data_zawarcia: date) -> bool:
+    """
+    Sprawdza czy na umowę mają zastosowanie przepisy stare (przed nowelizacją 2018).
+    Zgodnie z art. 118 k.c. w wersji przed 09.07.2018:
+    - Umowy zawarte przed 09.07.2018: przepisy stare (brak końca roku)
+    - Umowy zawarte po 09.07.2018: przepisy nowe (koniec roku)
+    """
+    return data_zawarcia < date(2018, 7, 9)
+
+
+def _oblicz_termin_koncowy(start: date, lata: int, stosowac_koniec_roku: bool) -> date:
+    """Oblicza termin końcowy przedawnienia z opcjonalną regułą końca roku."""
+    termin = dodaj_lata(start, lata)
+    if termin is None:
+        return start  # fallback
+    if stosowac_koniec_roku:
+        return date(termin.year, 12, 31)
+    return termin
+
+
 def analiza_cywilna(
-    data_bazowa: Optional[date],
-    ostatnia_wplata: Optional[date],
+    data_zawarcia_umowy: Optional[date],
+    data_wymagalnosci: Optional[date],
+    wpłaty: list[date],
     data_wyroku_cywilnego: Optional[date],
     data_wszcz_egzekucji: Optional[date],
     data_umor_egzekucji: Optional[date],
@@ -71,86 +113,226 @@ def analiza_cywilna(
     data_oceny: date
 ) -> WynikAnalizyCywilnej:
     """
-    Analiza przedawnienia cywilnego.
-    Zwraca uporządkowany wynik z terminami, statusami i podstawami.
+    Analiza przedawnienia cywilnego - przetwarzanie zdarzeń chronologicznie.
+    
+    Zasady:
+    - art. 118 k.c.: 3 lata od wymagalności (działalność gospodarcza)
+    - art. 123 k.c.: uznanie długu (wpłata) -> bieg od nowa od daty uznania
+    - art. 124 k.c.: wszczęcie egzekucji -> zawieszenie biegu do umorzenia
+    - art. 124 § 2 k.c.: umorzenie egzekucji -> bieg od nowa od umorzenia
+    - art. 125 k.c.: wyrok -> 6 lat od wyroku (reżim specjalny)
+    - przepisy przejściowe 2018: umowy przed 09.07.2018 = bez końca roku
     """
     wynik = WynikAnalizyCywilnej()
 
-    if data_bazowa is None:
-        wynik.bledy.append("Brak daty bazowej – analiza cywilna niemożliwa.")
+    # Walidacja danych wejściowych
+    if data_wymagalnosci is None:
+        wynik.bledy.append("Brak daty wymagalności – analiza cywilna niemożliwa.")
         return wynik
 
-    # Określ początek biegu i podstawę
-    if data_wyroku_cywilnego:
-        lata_cywil = 6
-        aktualna_podstawa = "Art. 125 § 1 k.c. (wyrok)"
-        start_cywil = data_wyroku_cywilnego
-        wynik.zalozenia.append(f"Początek biegu od wyroku: {_format_data(start_cywil)}")
+    if data_zawarcia_umowy is None:
+        # Jeśli brak daty zawarcia, zakładamy datę wymagalności (konwerwatywnie)
+        data_zawarcia_umowy = data_wymagalnosci
+        wynik.ostrzezenia.append("Brak daty zawarcia umowy – przyjmowano datę wymagalności jako datę zawarcia.")
+
+    # Określ rejim przedawnienia (stary/nowy) na podstawie daty ZAWARCIA umowy
+    stary_rezim = _czy_stara_przedawnienie(data_zawarcia_umowy)
+    wynik.zalozenia.append(
+        f"Data zawarcia umowy: {_format_data(data_zawarcia_umowy)} – "
+        f"{'przepisy STARE (przed 09.07.2018, bez końca roku)' if stary_rezim else 'przepisy NOWE (po 09.07.2018, z końcem roku)'}"
+    )
+    wynik.zalozenia.append(f"Data wymagalności (początek biegu): {_format_data(data_wymagalnosci)}")
+
+    # Buduj oś czasu zdarzeń
+    zdarzenia: list[ZdarzeniePrzedawnienia] = []
+
+    # Dla deliktów: data_zawarcia_umowy nie ma znaczenia dla przepisów przejściowych
+    # (szkoda deliktowa zawsze bez końca roku zgodnie z art. 442¹ k.c.)
+    if czy_delikt:
+        data_dla_rezimu = data_wymagalnosci
     else:
-        lata_cywil = lata_baza
-        aktualna_podstawa = podstawa_prawna
-        start_cywil = data_bazowa
-        wynik.zalozenia.append(f"Początek biegu od daty bazowej: {_format_data(start_cywil)}")
+        data_dla_rezimu = data_zawarcia_umowy if data_zawarcia_umowy else data_wymagalnosci
+    
+    stary_rezim = _czy_stara_przedawnienie(data_dla_rezimu)
+    if czy_delikt:
+        wynik.zalozenia.append(
+            f"Szkoda deliktowa (art. 442¹ k.c.): przepisy zawsze BEZ końca roku, "
+            f"niezależnie od daty."
+        )
+    else:
+        wynik.zalozenia.append(
+            f"Data zawarcia umowy: {_format_data(data_zawarcia_umowy)} – "
+            f"{'przepisy STARE (przed 09.07.2018, bez końca roku)' if stary_rezim else 'przepisy NOWE (po 09.07.2018, z końcem roku)'}"
+        )
+    wynik.zalozenia.append(f"Data wymagalności (początek biegu): {_format_data(data_wymagalnosci)}")
 
-    # Wpłata / uznanie długu
-    if ostatnia_wplata:
-        if data_wyroku_cywilnego and ostatnia_wplata > data_wyroku_cywilnego:
-            ostrz = ("Wpłata po dacie prawomocnego wyroku. "
-                     "Może mieć znaczenie dla oceny uznania roszczenia, "
-                     "ale nie przesądza automatycznie o skutkach przedawnieniowych.")
-            wynik.ostrzezenia.append(ostrz)
-            start_cywil = ostatnia_wplata
-            wynik.zalozenia.append(f"Przesunięcie startu na datę wpłaty: {_format_data(start_cywil)}")
-        elif not data_wyroku_cywilnego and ostatnia_wplata > start_cywil:
-            ostrz = ("Zarejestrowano wpłatę / uznanie długu. "
-                     "Może to stanowić uznanie roszczenia i przerwać bieg przedawnienia, "
-                     "ale skutek zależy od okoliczności sprawy.")
-            wynik.ostrzezenia.append(ostrz)
-            start_cywil = ostatnia_wplata
-            wynik.zalozenia.append(f"Przesunięcie startu na datę wpłaty: {_format_data(start_cywil)}")
+    # 1. Start biegu
+    zdarzenia.append(ZdarzeniePrzedawnienia(
+        typ=TypZdarzenia.START,
+        data=data_wymagalnosci,
+        opis=f"Początek biegu przedawnienia (wymagalność)"
+    ))
 
-    # Umorzenie egzekucji
-    if data_umor_egzekucji and data_umor_egzekucji > start_cywil:
-        start_cywil = data_umor_egzekucji
-        wynik.zalozenia.append(f"Po umorzeniu egzekucji bieg od nowa: {_format_data(start_cywil)}")
-        wynik.ostrzezenia.append("Po prawomocnym umorzeniu egzekucji bieg przedawnienia biegnie na nowo od tej daty.")
+    # 2. Wpłaty (tylko te po wymagalności)
+    for w in sorted(wpłaty):
+        if w >= data_wymagalnosci:
+            zdarzenia.append(ZdarzeniePrzedawnienia(
+                typ=TypZdarzenia.WPLATA,
+                data=w,
+                opis=f"Wpłata / uznanie długu",
+                czy_uznanie=True  # zakładamy, że wpłata to uznanie (art. 123 k.c.)
+            ))
 
-    # Egzekucja w toku
-    if data_wszcz_egzekucji is not None and data_umor_egzekucji is None:
+    # 3. Wyrok (jeśli jest)
+    if data_wyroku_cywilnego:
+        zdarzenia.append(ZdarzeniePrzedawnienia(
+            typ=TypZdarzenia.WYROK,
+            data=data_wyroku_cywilnego,
+            opis=f"Prawomocny wyrok / nakaz zapłaty"
+        ))
+
+    # 4. Egzekucja
+    if data_wszcz_egzekucji:
+        zdarzenia.append(ZdarzeniePrzedawnienia(
+            typ=TypZdarzenia.WYSZCZ_EGZEKUCJI,
+            data=data_wszcz_egzekucji,
+            opis=f"Wszczęcie egzekucji komorniczej"
+        ))
+
+    # 5. Umorzenie egzekucji
+    if data_umor_egzekucji:
+        zdarzenia.append(ZdarzeniePrzedawnienia(
+            typ=TypZdarzenia.UMORZENIE_EGZEKUCJI,
+            data=data_umor_egzekucji,
+            opis=f"Prawomocne umorzenie egzekucji"
+        ))
+
+    # Sortuj chronologicznie
+    zdarzenia.sort(key=lambda z: z.data)
+    wynik.os_czasu = zdarzenia
+
+    # Przetwarzaj zdarzenia sekwencyjnie
+    aktualny_start = data_wymagalnosci
+    aktualne_lata = lata_baza
+    aktualna_podstawa = podstawa_prawna
+    egzekucja_w_toku = False
+    wyrok_uzyskany = False
+
+    for i, zdarzenie in enumerate(zdarzenia):
+        if zdarzenie.typ == TypZdarzenia.START:
+            continue  # już obsłużone
+
+        elif zdarzenie.typ == TypZdarzenia.WPLATA:
+            if wyrok_uzyskany:
+                # Po wyroku wpłata nie resetuje przedawnienia automatycznie
+                wynik.ostrzezenia.append(
+                    f"Wpłata {_format_data(zdarzenie.data)} PO wyroku: "
+                    f"nie przesądza o przedawnieniu (art. 125 k.c. – reżim 6 lat od wyroku)."
+                )
+            elif egzekucja_w_toku:
+                # W trakcie egzekucji wpłata nie ma wpływu na bieg (zawieszenie)
+                wynik.zalozenia.append(
+                    f"Wpłata {_format_data(zdarzenie.data)} w trakcie egzekucji: "
+                    f"bieg przedawnienia zawieszony (art. 124 k.c.)."
+                )
+            else:
+                # Uznanie długu przed wyrokiem i poza egzekucją -> nowy bieg (art. 123 k.c.)
+                aktualny_start = zdarzenie.data
+                aktualne_lata = lata_baza
+                aktualna_podstawa = podstawa_prawna
+                wynik.zalozenia.append(
+                    f"Uznanie długu (wpłata) {_format_data(zdarzenie.data)}: "
+                    f"nowy bieg przedawnienia od tej daty (art. 123 k.c.), "
+                    f"{aktualne_lata} lat, podstawa: {aktualna_podstawa}"
+                )
+
+        elif zdarzenie.typ == TypZdarzenia.WYROK:
+            # Wyrok zmienia reżim na 6 lat (art. 125 § 1 k.c.)
+            wyrok_uzyskany = True
+            aktualny_start = zdarzenie.data
+            aktualne_lata = 6
+            aktualna_podstawa = "Art. 125 § 1 k.c. (wyrok)"
+            # Egzekucja kończy się wyrokiem (jeśli była)
+            egzekucja_w_toku = False
+            wynik.zalozenia.append(
+                f"Wyrok {_format_data(zdarzenie.data)}: "
+                f"reżim specjalny – 6 lat od wyroku (art. 125 § 1 k.c.)"
+            )
+
+        elif zdarzenie.typ == TypZdarzenia.WYSZCZ_EGZEKUCJI:
+            if wyrok_uzyskany:
+                # Egzekucja po wyroku – nie wpływa na przedawnienie cywilne (już 6 lat od wyroku)
+                wynik.zalozenia.append(
+                    f"Egzekucja {_format_data(zdarzenie.data)} po wyroku: "
+                    f"nie wpływa na przedawnienie cywilne (reżim art. 125 k.c.)."
+                )
+            else:
+                # Egzekucja przed wyrokiem – zawieszenie biegu (art. 124 k.c.)
+                egzekucja_w_toku = True
+                wynik.zalozenia.append(
+                    f"Wszczęcie egzekucji {_format_data(zdarzenie.data)}: "
+                    f"zawieszenie biegu przedawnienia (art. 124 § 1 k.c.)"
+                )
+
+        elif zdarzenie.typ == TypZdarzenia.UMORZENIE_EGZEKUCJI:
+            if egzekucja_w_toku:
+                # Umorzenie egzekucji przed wyrokiem -> bieg od nowa (art. 124 § 2 k.c.)
+                egzekucja_w_toku = False
+                aktualny_start = zdarzenie.data
+                aktualne_lata = lata_baza
+                aktualna_podstawa = podstawa_prawna
+                wynik.zalozenia.append(
+                    f"Umorzenie egzekucji {_format_data(zdarzenie.data)}: "
+                    f"bieg przedawnienia od nowa (art. 124 § 2 k.c.), "
+                    f"{aktualne_lata} lat od umorzenia, podstawa: {aktualna_podstawa}"
+                )
+            else:
+                # Umorzenie bez egzekucji lub po wyroku
+                if wyrok_uzyskany:
+                    wynik.zalozenia.append(
+                        f"Umorzenie egzekucji {_format_data(zdarzenie.data)} po wyroku: "
+                        f"brak wpływu na przedawnienie (trwa 6 lat od wyroku)."
+                    )
+                else:
+                    wynik.zalozenia.append(
+                        f"Umorzenie egzekucji {_format_data(zdarzenie.data)} bez wcześniejszego wszczęcia: "
+                        f"brak wpływu na przedawnienie."
+                    )
+
+    # Sprawdź czy egzekucja wciąż trwa
+    if egzekucja_w_toku and data_umor_egzekucji is None:
         wynik.wyniki.append(WynikObliczenia(
             nazwa="Egzekucja w toku",
-            termin=data_oceny,  # symbolicznie
+            termin=data_oceny,
             status="W_TOKU",
             podstawa_prawna="Art. 124 § 2 k.c.",
-            zalozenia=[f"Wszczęcie egzekucji: {_format_data(data_wszcz_egzekucji)}"],
-            ostrzezenia=["Przedawnienie nie biegnie na nowo, dopóki postępowanie nie zostanie prawomocnie zakończone."],
+            zalozenia=[f"Wszczęcie egzekucji: {_format_data(data_wszcz_egzekucji)}", "Brak umorzenia – postępowanie trwa"],
+            ostrzezenia=["Przedawnienie zawieszone do prawomocnego zakończenia egzekucji."],
             orientacyjny=True
         ))
         return wynik
 
-    # Oblicz termin
-    termin_podstawowy = dodaj_lata(start_cywil, lata_cywil)
-    if termin_podstawowy is None:
-        wynik.bledy.append("Nie udało się obliczyć terminu.")
-        return wynik
+    # Oblicz ostateczny termin
+    stosowac_koniec_roku = (not stary_rezim) and (not czy_delikt) and (not wyrok_uzyskany)
+    
+    if wyrok_uzyskany:
+        # Dla wyroku nie ma reguły końca roku (art. 125 k.c. – 6 lat od wyroku)
+        stosowac_koniec_roku = False
 
-    po_nowelizacji = start_cywil >= date(2018, 7, 9)
-    to_czysty_delikt = czy_delikt and not data_wyroku_cywilnego
+    termin_ostateczny = _oblicz_termin_koncowy(aktualny_start, aktualne_lata, stosowac_koniec_roku)
 
-    if po_nowelizacji and not to_czysty_delikt:
-        termin_ostateczny = date(termin_podstawowy.year, 12, 31)
-        adnotacja = " (przesunięto na koniec roku - art. 118 k.c.)"
-        wynik.zalozenia.append("Zastosowano regułę końca roku (nowelizacja 2018).")
-    else:
-        termin_ostateczny = termin_podstawowy
-        adnotacja = " (bez reguły na koniec roku)"
-
+    # Status
     if termin_ostateczny >= data_oceny:
         status = "OK"
-        komunikacja = f"Brak przedawnienia – roszczenie ważne do {_format_data(termin_ostateczny)}{adnotacja}."
+        komunikacja = f"Brak przedawnienia – roszczenie ważne do {_format_data(termin_ostateczny)}."
     else:
         status = "PRZEDAWNIONE"
-        komunikacja = f"Przedawnienie – termin upłynął {_format_data(termin_ostateczny)}{adnotacja}."
+        komunikacja = f"Przedawnienie – termin upłynął {_format_data(termin_ostateczny)}."
+
+    if stosowac_koniec_roku:
+        komunikacja += " (zastosowano regułę końca roku – art. 118 k.c.)"
+    else:
+        komunikacja += " (bez reguły końca roku)"
 
     wynik.wyniki.append(WynikObliczenia(
         nazwa=f"Przedawnienie cywilne [{aktualna_podstawa}]",
@@ -158,12 +340,9 @@ def analiza_cywilna(
         status=status,
         podstawa_prawna=aktualna_podstawa,
         zalozenia=wynik.zalozenia.copy(),
-        ostrzezenia=wynik.ostrzezenia.copy(),
+        ostrzezenia=[komunikacja] + wynik.ostrzezenia,
         orientacyjny=False
     ))
-    # Dodaj komunikat do pierwszego wyniku
-    if wynik.wyniki:
-        wynik.wyniki[0].ostrzezenia.insert(0, komunikacja)
 
     return wynik
 

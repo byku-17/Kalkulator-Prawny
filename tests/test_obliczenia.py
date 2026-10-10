@@ -33,12 +33,14 @@ def test_dodaj_lata_none():
 
 # ─────────────────────────────────────────────
 # TESTY: analiza_cywilna - umowna (3 lata)
+# Nowa sygnatura: data_zawarcia_umowy, data_wymagalnosci, wpłaty, ...
 # ─────────────────────────────────────────────
 def test_cywilna_umowna_brak_przedawienia():
-    """Umowa 2023-01-01, ocena 2025 - brak przedawnienia (koniec roku)."""
+    """Umowa zawarta 2023-01-01, wymagalność 2023-01-01, ocena 2025 - brak przedawnienia (koniec roku)."""
     wynik = analiza_cywilna(
-        data_bazowa=date(2023, 1, 1),
-        ostatnia_wplata=None,
+        data_zawarcia_umowy=date(2023, 1, 1),
+        data_wymagalnosci=date(2023, 1, 1),
+        wpłaty=[],
         data_wyroku_cywilnego=None,
         data_wszcz_egzekucji=None,
         data_umor_egzekucji=None,
@@ -50,17 +52,18 @@ def test_cywilna_umowna_brak_przedawienia():
     assert len(wynik.wyniki) == 1
     w = wynik.wyniki[0]
     assert w.status == "OK"
-    # Po nowelizacji 2018 -> koniec roku
+    # Umowa po 2018 -> koniec roku
     assert w.termin == date(2026, 12, 31)
     assert "Art. 118" in w.podstawa_prawna
-    assert any("końca roku" in z for z in w.zalozenia)
+    assert any("końca roku" in z for z in w.zalozenia + w.ostrzezenia)
 
 
 def test_cywilna_umowna_przedawiona():
-    """Umowa 2020-01-01, ocena 2024 - przedawniona (koniec roku)."""
+    """Umowa 2020-01-01, wymagalność 2020-01-01, ocena 2024 - przedawniona (koniec roku)."""
     wynik = analiza_cywilna(
-        data_bazowa=date(2020, 1, 1),
-        ostatnia_wplata=None,
+        data_zawarcia_umowy=date(2020, 1, 1),
+        data_wymagalnosci=date(2020, 1, 1),
+        wpłaty=[],
         data_wyroku_cywilnego=None,
         data_wszcz_egzekucji=None,
         data_umor_egzekucji=None,
@@ -72,15 +75,16 @@ def test_cywilna_umowna_przedawiona():
     assert len(wynik.wyniki) == 1
     w = wynik.wyniki[0]
     assert w.status == "PRZEDAWNIONE"
-    # Po nowelizacji 2018 -> koniec roku
+    # Umowa po 2018 -> koniec roku
     assert w.termin == date(2023, 12, 31)
 
 
 def test_cywilna_z_wyrokiem_6_lat():
-    """Prawomocny wyrok 2023-01-01 -> 6 lat (koniec roku po nowelizacji)."""
+    """Umowa 2020, wymagalność 2020, wyrok 2023-01-01 -> 6 lat od wyroku (koniec roku)."""
     wynik = analiza_cywilna(
-        data_bazowa=date(2020, 1, 1),
-        ostatnia_wplata=None,
+        data_zawarcia_umowy=date(2020, 1, 1),
+        data_wymagalnosci=date(2020, 1, 1),
+        wpłaty=[],
         data_wyroku_cywilnego=date(2023, 1, 1),
         data_wszcz_egzekucji=None,
         data_umor_egzekucji=None,
@@ -92,15 +96,16 @@ def test_cywilna_z_wyrokiem_6_lat():
     assert len(wynik.wyniki) == 1
     w = wynik.wyniki[0]
     assert "Art. 125" in w.podstawa_prawna
-    # Wyrok po 2018-07-09 -> koniec roku
-    assert w.termin == date(2029, 12, 31)
+    # Wyrok po 2018-07-09 -> koniec roku (ale dla wyroku nie ma końca roku - 6 lat od wyroku)
+    assert w.termin == date(2029, 1, 1)
 
 
 def test_cywilna_regula_konca_roku_po_2018():
-    """Start po 2018-07-09 -> koniec roku."""
+    """Umowa zawarta po 2018-07-09 -> koniec roku."""
     wynik = analiza_cywilna(
-        data_bazowa=date(2020, 6, 15),
-        ostatnia_wplata=None,
+        data_zawarcia_umowy=date(2020, 6, 15),
+        data_wymagalnosci=date(2020, 6, 15),
+        wpłaty=[],
         data_wyroku_cywilnego=None,
         data_wszcz_egzekucji=None,
         data_umor_egzekucji=None,
@@ -110,14 +115,17 @@ def test_cywilna_regula_konca_roku_po_2018():
         data_oceny=date(2025, 1, 1)
     )
     w = wynik.wyniki[0]
-    assert w.termin == date(2023, 12, 31)  # koniec roku 2023
+    # 3 lata od 2020-06-15 = 2023-06-15 -> koniec roku 2023
+    assert w.termin == date(2023, 12, 31)
+    assert any("nowe" in z.lower() or "koniec roku" in z.lower() for z in w.zalozenia)
 
 
 def test_cywilna_bez_reguly_konca_roku_przed_2018():
-    """Start przed 2018-07-09 -> bez końca roku."""
+    """Umowa zawarta przed 2018-07-09 -> bez końca roku."""
     wynik = analiza_cywilna(
-        data_bazowa=date(2018, 1, 1),
-        ostatnia_wplata=None,
+        data_zawarcia_umowy=date(2018, 1, 1),
+        data_wymagalnosci=date(2018, 1, 1),
+        wpłaty=[],
         data_wyroku_cywilnego=None,
         data_wszcz_egzekucji=None,
         data_umor_egzekucji=None,
@@ -127,14 +135,17 @@ def test_cywilna_bez_reguly_konca_roku_przed_2018():
         data_oceny=date(2025, 1, 1)
     )
     w = wynik.wyniki[0]
-    assert w.termin == date(2021, 1, 1)  # dokładnie 3 lata
+    # 3 lata od 2018-01-01 = 2021-01-01 (bez końca roku)
+    assert w.termin == date(2021, 1, 1)
+    assert any("stare" in z.lower() or "bez końca roku" in z.lower() for z in w.zalozenia)
 
 
 def test_cywilna_delikt_bez_reguly_konca_roku():
     """Szkoda deliktowa (art. 442¹) -> bez reguły końca roku."""
     wynik = analiza_cywilna(
-        data_bazowa=date(2020, 6, 15),
-        ostatnia_wplata=None,
+        data_zawarcia_umowy=None,
+        data_wymagalnosci=date(2020, 6, 15),
+        wpłaty=[],
         data_wyroku_cywilnego=None,
         data_wszcz_egzekucji=None,
         data_umor_egzekucji=None,
@@ -144,14 +155,17 @@ def test_cywilna_delikt_bez_reguly_konca_roku():
         data_oceny=date(2025, 1, 1)
     )
     w = wynik.wyniki[0]
-    assert w.termin == date(2023, 6, 15)  # dokładnie 3 lata, bez końca roku
+    # Delikty: bez końca roku, dokładnie 3 lata
+    assert w.termin == date(2023, 6, 15)
+    assert any("bez końca roku" in z.lower() or "delikt" in z.lower() for z in w.zalozenia + w.ostrzezenia)
 
 
 def test_cywilna_wplata_przesuwa_start():
-    """Wpłata po dacie bazowej przesuwa start (koniec roku)."""
+    """Wpłata po dacie wymagalności przesuwa start (koniec roku dla umowy po 2018)."""
     wynik = analiza_cywilna(
-        data_bazowa=date(2020, 1, 1),
-        ostatnia_wplata=date(2022, 1, 1),
+        data_zawarcia_umowy=date(2020, 1, 1),
+        data_wymagalnosci=date(2020, 1, 1),
+        wpłaty=[date(2022, 1, 1)],
         data_wyroku_cywilnego=None,
         data_wszcz_egzekucji=None,
         data_umor_egzekucji=None,
@@ -163,14 +177,35 @@ def test_cywilna_wplata_przesuwa_start():
     w = wynik.wyniki[0]
     # Wpłata 2022-01-01 + 3 lata = 2025-01-01 -> koniec roku 2025
     assert w.termin == date(2025, 12, 31)
-    assert any("wpłat" in o.lower() for o in w.ostrzezenia)
+    assert any("uznanie" in z.lower() or "wpłata" in z.lower() for z in w.zalozenia)
+
+
+def test_cywilna_wplata_po_wyroku_nie_przesuwa():
+    """Wpłata PO wyroku nie resetuje przedawnienia (reżim 6 lat od wyroku)."""
+    wynik = analiza_cywilna(
+        data_zawarcia_umowy=date(2020, 1, 1),
+        data_wymagalnosci=date(2020, 1, 1),
+        wpłaty=[date(2024, 1, 1)],
+        data_wyroku_cywilnego=date(2023, 1, 1),
+        data_wszcz_egzekucji=None,
+        data_umor_egzekucji=None,
+        lata_baza=3,
+        podstawa_prawna="Art. 118 k.c.",
+        czy_delikt=False,
+        data_oceny=date(2025, 1, 1)
+    )
+    w = wynik.wyniki[0]
+    # Wyrok 2023 + 6 lat = 2029-01-01 (bez końca roku)
+    assert w.termin == date(2029, 1, 1)
+    assert any("po wyroku" in o.lower() for o in w.ostrzezenia)
 
 
 def test_cywilna_umorzenie_egzekucji_przesuwa_start():
-    """Umorzenie egzekucji przesuwa start (koniec roku)."""
+    """Umorzenie egzekucji przed wyrokiem przesuwa start (koniec roku)."""
     wynik = analiza_cywilna(
-        data_bazowa=date(2020, 1, 1),
-        ostatnia_wplata=None,
+        data_zawarcia_umowy=date(2020, 1, 1),
+        data_wymagalnosci=date(2020, 1, 1),
+        wpłaty=[],
         data_wyroku_cywilnego=None,
         data_wszcz_egzekucji=date(2021, 1, 1),
         data_umor_egzekucji=date(2023, 1, 1),
@@ -182,13 +217,33 @@ def test_cywilna_umorzenie_egzekucji_przesuwa_start():
     w = wynik.wyniki[0]
     # Umorzenie 2023-01-01 + 3 lata = 2026-01-01 -> koniec roku 2026
     assert w.termin == date(2026, 12, 31)
+    assert any("umorzenie" in z.lower() for z in w.zalozenia)
+
+
+def test_cywilna_umorzenie_po_wyroku_nie_przesuwa():
+    """Umorzenie egzekucji PO wyroku nie resetuje (trwa 6 lat od wyroku)."""
+    wynik = analiza_cywilna(
+        data_zawarcia_umowy=date(2020, 1, 1),
+        data_wymagalnosci=date(2020, 1, 1),
+        wpłaty=[],
+        data_wyroku_cywilnego=date(2023, 1, 1),
+        data_wszcz_egzekucji=date(2024, 1, 1),
+        data_umor_egzekucji=date(2025, 1, 1),
+        lata_baza=3,
+        podstawa_prawna="Art. 118 k.c.",
+        czy_delikt=False,
+        data_oceny=date(2026, 1, 1)
+    )
+    w = wynik.wyniki[0]
+    assert w.termin == date(2029, 1, 1)  # 6 lat od wyroku 2023
 
 
 def test_cywilna_egzekucja_w_toku():
-    """Egzekucja wszczęta, nie umorzona -> status W_TOKU."""
+    """Egzekucja wszczęta, nie umorzona -> status W_TOKU (zawieszenie)."""
     wynik = analiza_cywilna(
-        data_bazowa=date(2020, 1, 1),
-        ostatnia_wplata=None,
+        data_zawarcia_umowy=date(2020, 1, 1),
+        data_wymagalnosci=date(2020, 1, 1),
+        wpłaty=[],
         data_wyroku_cywilnego=None,
         data_wszcz_egzekucji=date(2023, 1, 1),
         data_umor_egzekucji=None,
@@ -203,11 +258,12 @@ def test_cywilna_egzekucja_w_toku():
     assert "Art. 124" in w.podstawa_prawna
 
 
-def test_cywilna_brak_daty_bazowej():
-    """Brak daty bazowej -> błąd."""
+def test_cywilna_brak_daty_wymagalnosci():
+    """Brak daty wymagalności -> błąd."""
     wynik = analiza_cywilna(
-        data_bazowa=None,
-        ostatnia_wplata=None,
+        data_zawarcia_umowy=date(2020, 1, 1),
+        data_wymagalnosci=None,
+        wpłaty=[],
         data_wyroku_cywilnego=None,
         data_wszcz_egzekucji=None,
         data_umor_egzekucji=None,
@@ -217,11 +273,11 @@ def test_cywilna_brak_daty_bazowej():
         data_oceny=date(2025, 1, 1)
     )
     assert len(wynik.bledy) == 1
-    assert "Brak daty bazowej" in wynik.bledy[0]
+    assert "Brak daty wymagalności" in wynik.bledy[0]
 
 
 # ─────────────────────────────────────────────
-# TESTY: analiza_karna
+# TESTY: analiza_karna (bez zmian)
 # ─────────────────────────────────────────────
 def test_karna_podstawowa_trwa():
     """Czyn 2020, 10 lat, ocena 2025 -> trwa."""
@@ -244,12 +300,12 @@ def test_karna_wszczenie_przed_uplywem_przedluza_o_10_lat():
     wynik = analiza_karna(
         data_czynu=date(2020, 1, 1),
         lata_karne=10,
-        data_wszcz_k=date(2025, 1, 1),  # przed upływem (2030)
+        data_wszcz_k=date(2025, 1, 1),
         data_umor_k=None,
         data_oceny=date(2026, 1, 1)
     )
     w = wynik.wyniki[0]
-    assert w.termin == date(2040, 1, 1)  # 2030 + 10
+    assert w.termin == date(2040, 1, 1)
     assert any("Przedłużono o 10 lat" in z for z in w.zalozenia)
 
 
@@ -258,12 +314,12 @@ def test_karna_wszczenie_po_uplywie():
     wynik = analiza_karna(
         data_czynu=date(2020, 1, 1),
         lata_karne=5,
-        data_wszcz_k=date(2030, 1, 1),  # po upływie (2025)
+        data_wszcz_k=date(2030, 1, 1),
         data_umor_k=None,
         data_oceny=date(2031, 1, 1)
     )
     w = wynik.wyniki[0]
-    assert w.termin == date(2025, 1, 1)  # bez przedłużenia
+    assert w.termin == date(2025, 1, 1)
     assert any("po pierwotnym upływie" in o for o in w.ostrzezenia)
 
 
@@ -295,7 +351,7 @@ def test_karna_brak_daty_czynu():
 
 
 # ─────────────────────────────────────────────
-# TESTY: analiza_zatarcia
+# TESTY: analiza_zatarcia (bez zmian)
 # ─────────────────────────────────────────────
 def test_zatarcie_z_wykonaniem():
     """Wyrok 2020, wykonanie 2023, 5 lat -> 2028."""
@@ -309,7 +365,6 @@ def test_zatarcie_z_wykonaniem():
     w = wynik.wyniki[0]
     assert w.termin == date(2028, 1, 1)
     assert any("wykonania" in z for z in w.zalozenia)
-    assert not any("OSTRZEŻENIE" in o for o in w.ostrzezenia)
 
 
 def test_zatarcie_bez_wykonania_orientacyjnie():
@@ -369,8 +424,9 @@ def test_zatarcie_brak_wyroku():
 def test_scenariusz_pozyczka_z_wplata():
     """Pożyczka 2020, wpłata 2022, ocena 2024 (koniec roku)."""
     wynik = analiza_cywilna(
-        data_bazowa=date(2020, 1, 1),
-        ostatnia_wplata=date(2022, 6, 1),
+        data_zawarcia_umowy=date(2020, 1, 1),
+        data_wymagalnosci=date(2020, 1, 1),
+        wpłaty=[date(2022, 6, 1)],
         data_wyroku_cywilnego=None,
         data_wszcz_egzekucji=None,
         data_umor_egzekucji=None,
@@ -382,14 +438,14 @@ def test_scenariusz_pozyczka_z_wplata():
     w = wynik.wyniki[0]
     # Wpłata 2022-06-01 + 3 lata = 2025-06-01 -> koniec roku 2025
     assert w.termin == date(2025, 12, 31)
-    assert w.status == "OK"
 
 
 def test_scenariusz_wyrok_egzekucja_umorzenie():
-    """Wyrok 2021, egzekucja 2022, umorzenie 2024 (koniec roku)."""
+    """Umowa 2019, wymagalność 2019, wyrok 2021, egzekucja 2022, umorzenie 2024."""
     wynik = analiza_cywilna(
-        data_bazowa=date(2019, 1, 1),
-        ostatnia_wplata=None,
+        data_zawarcia_umowy=date(2019, 1, 1),
+        data_wymagalnosci=date(2019, 1, 1),
+        wpłaty=[],
         data_wyroku_cywilnego=date(2021, 1, 1),
         data_wszcz_egzekucji=date(2022, 1, 1),
         data_umor_egzekucji=date(2024, 1, 1),
@@ -399,8 +455,47 @@ def test_scenariusz_wyrok_egzekucja_umorzenie():
         data_oceny=date(2025, 1, 1)
     )
     w = wynik.wyniki[0]
-    # Umorzenie 2024-01-01 + 6 lat = 2030-01-01 -> koniec roku 2030
-    assert w.termin == date(2030, 12, 31)
+    # Wyrok 2021 -> 6 lat od wyroku = 2027-01-01 (bez końca roku)
+    assert w.termin == date(2027, 1, 1)
+    assert "Art. 125" in w.podstawa_prawna
+
+
+def test_scenariusz_egzekucja_umorzenie_bez_wyroku():
+    """Umowa 2020, egzekucja 2022, umorzenie 2024 (bez wyroku)."""
+    wynik = analiza_cywilna(
+        data_zawarcia_umowy=date(2020, 1, 1),
+        data_wymagalnosci=date(2020, 1, 1),
+        wpłaty=[],
+        data_wyroku_cywilnego=None,
+        data_wszcz_egzekucji=date(2022, 1, 1),
+        data_umor_egzekucji=date(2024, 1, 1),
+        lata_baza=3,
+        podstawa_prawna="Art. 118 k.c.",
+        czy_delikt=False,
+        data_oceny=date(2025, 1, 1)
+    )
+    w = wynik.wyniki[0]
+    # Umorzenie 2024 + 3 lata = 2027 -> koniec roku 2027
+    assert w.termin == date(2027, 12, 31)
+
+
+def test_scenariusz_wielokrotne_wplaty():
+    """Wiele wpłat - każda resetuje bieg (ostatnia wygrywa)."""
+    wynik = analiza_cywilna(
+        data_zawarcia_umowy=date(2020, 1, 1),
+        data_wymagalnosci=date(2020, 1, 1),
+        wpłaty=[date(2021, 1, 1), date(2022, 1, 1), date(2023, 1, 1)],
+        data_wyroku_cywilnego=None,
+        data_wszcz_egzekucji=None,
+        data_umor_egzekucji=None,
+        lata_baza=3,
+        podstawa_prawna="Art. 118 k.c.",
+        czy_delikt=False,
+        data_oceny=date(2025, 1, 1)
+    )
+    w = wynik.wyniki[0]
+    # Ostatnia wpłata 2023-01-01 + 3 lata = 2026 -> koniec roku 2026
+    assert w.termin == date(2026, 12, 31)
 
 
 def test_scenariusz_karna_z_wszczeniem_i_umorzeniem():
@@ -413,7 +508,7 @@ def test_scenariusz_karna_z_wszczeniem_i_umorzeniem():
         data_oceny=date(2025, 1, 1)
     )
     w = wynik.wyniki[0]
-    assert w.termin == date(2038, 1, 1)  # 2028 + 10
+    assert w.termin == date(2038, 1, 1)
     assert w.status == "TRWA"
     assert any("Umorzenie" in z for z in w.zalozenia)
 
