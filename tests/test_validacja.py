@@ -5,7 +5,7 @@ from datetime import date
 # Dodaj katalog główny do ścieżki
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from app import waliduj_dane
+from walidacja import waliduj_dane
 
 
 # ─────────────────────────────────────────────
