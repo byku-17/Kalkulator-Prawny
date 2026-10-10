@@ -63,6 +63,7 @@ class WynikAnalizyKarne:
     bledy: list[str] = field(default_factory=list)
     ostrzezenia: list[str] = field(default_factory=list)
     zalozenia: list[str] = field(default_factory=list)
+    nieobslugiwane: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -72,6 +73,7 @@ class WynikAnalizyZatarcia:
     bledy: list[str] = field(default_factory=list)
     ostrzezenia: list[str] = field(default_factory=list)
     zalozenia: list[str] = field(default_factory=list)
+    nieobslugiwane: list[str] = field(default_factory=list)
 
 
 def dodaj_lata(d: Optional[date], lata: int) -> Optional[date]:
@@ -664,10 +666,24 @@ def analiza_karna(
     lata_karne: int,
     data_wszcz_k: Optional[date],
     data_umor_k: Optional[date],
-    data_oceny: date
+    data_oceny: date,
+    czy_oskarzenie_prywatne: bool = False
 ) -> WynikAnalizyKarne:
     """
     Analiza przedawnienia karalności (art. 101, 102 k.k.).
+
+    Obsługiwane:
+    - art. 101 § 1 k.k.: ustawowy termin przedawnienia karalności zależny od
+      kwalifikacji czynu (przekazywany jako lata_karne)
+    - art. 102 k.k.: przedłużenie o 10 lat, jeżeli w okresie przedawnienia
+      wszczęto postępowanie PRZECIWKO OSOBIE
+
+    Nieobsługiwane (zgłaszane jawnie):
+    - art. 101 § 2 k.k. (przestępstwa ścigane z oskarżenia prywatnego – 1 rok
+      od dowiedzenia się o osobie sprawcy)
+    - przepisy szczególne przewidujące inne terminy przedawnienia
+    - wydłużenie karalności w trybie art. 102 wobec braku daty wszczęcia
+      postępowania przeciwko osobie
     """
     wynik = WynikAnalizyKarne()
 
@@ -675,42 +691,74 @@ def analiza_karna(
         wynik.bledy.append("Brak daty czynu – nie można obliczyć przedawnienia karalności.")
         return wynik
 
-    termin_karny = dodaj_lata(data_czynu, lata_karne)
-    if termin_karny is None:
+    termin_pierwotny = dodaj_lata(data_czynu, lata_karne)
+    if termin_pierwotny is None:
         wynik.bledy.append("Nie udało się obliczyć terminu karnego.")
         return wynik
 
-    wynik.zalozenia.append(f"Data czynu: {_format_data(data_czynu)}")
-    wynik.zalozenia.append(f"Ustawowe przedawnienie: {lata_karne} lat")
-    wynik.zalozenia.append(f"Pierwotny termin: {_format_data(termin_karny)}")
+    termin_karny = termin_pierwotny
 
+    wynik.zalozenia.append(f"Data czynu: {_format_data(data_czynu)}")
+    wynik.zalozenia.append(f"Ustawowy termin przedawnienia karalności: {lata_karne} lat (art. 101 § 1 k.k.)")
+    wynik.zalozenia.append(f"Pierwotny termin: {_format_data(termin_pierwotny)}")
+
+    if czy_oskarzenie_prywatne:
+        wynik.nieobslugiwane.append(
+            "Przestępstwo ścigane z oskarżenia prywatnego (art. 101 § 2 k.k.): "
+            "karalność ustaje z upływem 1 roku od dowiedzenia się przez pokrzywdzonego "
+            "o osobie sprawcy. Wymaga odrębnej daty – obecnie nieobsługiwane."
+        )
+
+    # Art. 102 k.k.: przedłużenie karalności o 10 lat
     if data_wszcz_k:
-        if data_wszcz_k <= termin_karny:
-            termin_karny = dodaj_lata(termin_karny, 10)
-            wynik.zalozenia.append(f"Wszczęcie postępowania: {_format_data(data_wszcz_k)} (przed upływem)")
-            wynik.zalozenia.append("Przedłużono o 10 lat (art. 102 k.k.).")
-            wynik.ostrzezenia.append("Art. 102 k.k.: Wszczęto postępowanie przed upływem przedawnienia. Karalność wydłużona o 10 lat.")
+        if data_wszcz_k <= termin_pierwotny:
+            termin_karny = dodaj_lata(termin_pierwotny, 10)
+            wynik.zalozenia.append(
+                f"Wszczęcie postępowania przeciwko osobie: {_format_data(data_wszcz_k)} "
+                f"(w okresie przedawnienia)"
+            )
+            wynik.zalozenia.append("Karalność przedłużona o 10 lat (art. 102 k.k.).")
+            wynik.ostrzezenia.append(
+                "Art. 102 k.k.: wszczęto postępowanie przeciwko osobie przed upływem "
+                "pierwotnego terminu – karalność przedłużona o 10 lat."
+            )
         else:
-            wynik.ostrzezenia.append("Postępowanie karne wszczęto po pierwotnym upływie terminu przedawnienia karalności.")
+            wynik.ostrzezenia.append(
+                "Postępowanie karne wszczęto po upływie pierwotnego terminu przedawnienia "
+                "karalności – art. 102 k.k. nie wydłuża karalności."
+            )
     else:
-        wynik.ostrzezenia.append("Brak daty wszczęcia. Wyliczenia nie uwzględniają ewentualnego przedłużenia o 10 lat.")
+        wynik.ostrzezenia.append(
+            "Brak daty wszczęcia postępowania przeciwko osobie – nie można ustalić, "
+            "czy zachodzi przedłużenie karalności o 10 lat (art. 102 k.k.). "
+            "Podaj datę wszczęcia, aby uzyskać pełny wynik."
+        )
 
     if data_umor_k:
         wynik.zalozenia.append(f"Umorzenie postępowania: {_format_data(data_umor_k)}")
-        wynik.ostrzezenia.append("Opcja podjęcia go na nowo zależy od podstaw prawnych umorzenia.")
+        wynik.ostrzezenia.append(
+            "Skutek umorzenia (możliwość podjęcia postępowania) zależy od jego podstaw "
+            "prawnych – wymaga oceny indywidualnej."
+        )
 
     if termin_karny >= data_oceny:
         status = "TRWA"
-        komunikacja = "Karalność trwa: zawiadomienie organów ścigania / kontynuowanie sprawy jest prawnie możliwe."
+        komunikacja = (
+            f"Karalność trwa do {_format_data(termin_karny)}: zawiadomienie organów ścigania / "
+            f"kontynuowanie sprawy jest prawnie możliwe."
+        )
     else:
         status = "WYGASŁE"
-        komunikacja = "Karalność wygasła: organy z urzędu odmówią wszczęcia lub umorzą postępowanie (przedawnienie)."
+        komunikacja = (
+            f"Karalność wygasła {_format_data(termin_karny)}: organy z urzędu odmówią "
+            f"wszczęcia lub umorzą postępowanie (przedawnienie)."
+        )
 
     wynik.wyniki.append(WynikObliczenia(
-        nazwa="Orientacyjne ustanie karalności (Art. 101/102 k.k.)",
+        nazwa="Orientacyjne ustanie karalności (art. 101/102 k.k.)",
         termin=termin_karny,
         status=status,
-        podstawa_prawna="Art. 101, 102 k.k.",
+        podstawa_prawna="Art. 101 § 1, art. 102 k.k.",
         zalozenia=wynik.zalozenia.copy(),
         ostrzezenia=[komunikacja] + wynik.ostrzezenia,
         orientacyjny=True
@@ -722,50 +770,109 @@ def analiza_karna(
 def analiza_zatarcia(
     data_wyroku_k: Optional[date],
     data_wykonania: Optional[date],
-    lata_zat: int,
-    data_oceny: date
+    lata_zatarcia: int,
+    data_oceny: date,
+    lata_zatarcia_wyjatek: Optional[int] = None,
+    rodzaj_kary: str = ""
 ) -> WynikAnalizyZatarcia:
     """
     Analiza zatarcia skazania (art. 107 k.k.).
+
+    - art. 107 § 1 k.k.: zatarcie z mocy prawa po 3 / 5 / 10 latach
+    - art. 107 § 4 k.k.: zatarcie w drodze wyjątku na wniosek skazanego
+      (po 5 latach od wykonania kary pozbawienia wolności)
+
+    Brak daty wykonania kary -> wynik niepewny (BRAK_DANYCH).
+    NIE substytuujemy datą wyroku.
     """
     wynik = WynikAnalizyZatarcia()
 
     if data_wyroku_k is None:
-        # To nie jest błąd – po prostu pomijamy analizę
+        # Brak wyroku – analiza pomijana (nie błąd)
         return wynik
 
-    if data_wykonania:
-        termin_zatarcia = dodaj_lata(data_wykonania, lata_zat)
-        baza = f"od wykonania/darowania kary ({_format_data(data_wykonania)})"
-        wynik.zalozenia.append(f"Data wykonania kary: {_format_data(data_wykonania)}")
-    else:
-        termin_zatarcia = dodaj_lata(data_wyroku_k, lata_zat)
-        baza = f"od wyroku – orientacyjnie ({_format_data(data_wyroku_k)})"
-        wynik.ostrzezenia.append("OSTRZEŻENIE: Zatarcie wyliczono orientacyjnie od daty wyroku, brak daty wykonania kary.")
-        wynik.zalozenia.append(f"Data wyroku (substytucja): {_format_data(data_wyroku_k)}")
+    wynik.zalozenia.append(f"Data wyroku skazującego: {_format_data(data_wyroku_k)}")
+    if rodzaj_kary:
+        wynik.zalozenia.append(f"Rodzaj kary: {rodzaj_kary}")
 
-    if termin_zatarcia is None:
+    # Bez daty wykonania kary nie da się rzetelnie wyznaczyć terminu
+    if data_wykonania is None:
+        wynik.wyniki.append(WynikObliczenia(
+            nazwa="Zatarcie skazania – dane niewystarczające",
+            termin=data_oceny,
+            status="BRAK_DANYCH",
+            podstawa_prawna="Art. 107 k.k.",
+            zalozenia=wynik.zalozenia.copy(),
+            ostrzezenia=[
+                "Brak daty wykonania / zakończenia / darowania kary. Termin zatarcia liczy się "
+                "od wykonania (lub darowania, albo przedawnienia wykonania) kary – "
+                "podaj tę datę, aby uzyskać rzetelny wynik."
+            ],
+            orientacyjny=True
+        ))
+        return wynik
+
+    wynik.zalozenia.append(f"Data wykonania / darowania / zakończenia kary: {_format_data(data_wykonania)}")
+
+    # --- Zatarcie automatyczne (art. 107 § 1 k.k.) ---
+    termin_automatyczny = dodaj_lata(data_wykonania, lata_zatarcia)
+    if termin_automatyczny is None:
         wynik.bledy.append("Nie udało się obliczyć terminu zatarcia.")
         return wynik
 
-    wynik.zalozenia.append(f"Okres zatarcia: {lata_zat} lat")
-    wynik.zalozenia.append(f"Baza obliczeń: {baza}")
-
-    if termin_zatarcia < data_oceny:
-        status = "ZATARTE"
-        komunikacja = f"Zatarcie skazania: prawdopodobnie nastąpiło {_format_data(termin_zatarcia)} ({baza})."
+    if termin_automatyczny < data_oceny:
+        status_auto = "ZATARTE"
+        kom_auto = (
+            f"Zatarcie z mocy prawa (art. 107 § 1 k.k.): nastąpiło "
+            f"{_format_data(termin_automatyczny)} ({lata_zatarcia} lat od wykonania kary)."
+        )
     else:
-        status = "W_KRK"
-        komunikacja = f"Zatarcie skazania: skazanie prawdopodobnie nadal widnieje w KRK (orientacyjnie: {_format_data(termin_zatarcia)})."
+        status_auto = "W_KRK"
+        kom_auto = (
+            f"Zatarcie z mocy prawa (art. 107 § 1 k.k.): skazanie pozostaje w KRK do "
+            f"{_format_data(termin_automatyczny)} ({lata_zatarcia} lat od wykonania kary)."
+        )
 
     wynik.wyniki.append(WynikObliczenia(
-        nazwa="Orientacyjne zatarcie skazania",
-        termin=termin_zatarcia,
-        status=status,
-        podstawa_prawna="Art. 107 k.k.",
-        zalozenia=wynik.zalozenia.copy(),
-        ostrzezenia=[komunikacja] + wynik.ostrzezenia,
+        nazwa="Zatarcie z mocy prawa (art. 107 § 1 k.k.)",
+        termin=termin_automatyczny,
+        status=status_auto,
+        podstawa_prawna="Art. 107 § 1 k.k.",
+        zalozenia=wynik.zalozenia.copy() + [f"Okres zatarcia z mocy prawa: {lata_zatarcia} lat"],
+        ostrzezenia=[kom_auto],
         orientacyjny=True
     ))
+
+    # --- Zatarcie w drodze wyjątku na wniosek (art. 107 § 4 k.k.) ---
+    if lata_zatarcia_wyjatek is not None:
+        termin_wyjatek = dodaj_lata(data_wykonania, lata_zatarcia_wyjatek)
+        if termin_wyjatek is not None and termin_wyjatek < termin_automatyczny:
+            if termin_wyjatek < data_oceny:
+                status_wyj = "ZATARTE"
+                kom_wyj = (
+                    f"Możliwe zatarcie w drodze wyjątku (art. 107 § 4 k.k.): termin "
+                    f"minimalny upłynął {_format_data(termin_wyjatek)} – wymaga wniosku do sądu "
+                    f"i spełnienia dodatkowych przesłanek."
+                )
+            else:
+                status_wyj = "MOZLIWE_WCZEŚNIEJ"
+                kom_wyj = (
+                    f"Możliwe wcześniejsze zatarcie w drodze wyjątku na wniosek (art. 107 § 4 k.k.): "
+                    f"od {_format_data(termin_wyjatek)}, po spełnieniu przesłanek (m.in. przestrzeganie "
+                    f"porządku prawnego)."
+                )
+
+            wynik.wyniki.append(WynikObliczenia(
+                nazwa="Zatarcie w drodze wyjątku na wniosek (art. 107 § 4 k.k.)",
+                termin=termin_wyjatek,
+                status=status_wyj,
+                podstawa_prawna="Art. 107 § 4 k.k.",
+                zalozenia=wynik.zalozenia.copy() + [
+                    f"Minimalny okres do wniosku: {lata_zatarcia_wyjatek} lat od wykonania kary",
+                    "Zatarcie w drodze wyjątku następuje wyłącznie na wniosek skazanego i zależy od decyzji sądu.",
+                ],
+                ostrzezenia=[kom_wyj],
+                orientacyjny=True
+            ))
 
     return wynik

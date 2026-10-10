@@ -182,20 +182,23 @@ with col2:
         "Zbrodnia np. podrabianie środków płatniczych (przedawnienie: 20 lat)": 20
     }
     wybor_kk = st.selectbox("Kwalifikacja czynu (najczęstsze przestępstwa)", list(OPCJE_KK.keys()), help="Wybierz konkretny artykuł k.k., aby ustalić ustawowy okres przedawnienia karalności.")
+    czy_oskarzenie_prywatne = st.checkbox("Przestępstwo ścigane z oskarżenia prywatnego?", help="Art. 101 § 2 k.k. – odrębny termin (1 rok od dowiedzenia się o sprawcy). Obecnie nieobsługiwane, zostanie zgłoszone.")
 
-    wszczecie_k = st.date_input("Data wszczęcia postępowania karnego (przeciwko osobie)", value=None, min_value=MIN_DATE, help="Przedstawienie zarzutów osobie fizycznej (przedłuża karalność o 10 lat).")
+    wszczecie_k = st.date_input("Data wszczęcia postępowania karnego (przeciwko osobie)", value=None, min_value=MIN_DATE, help="Wszczęcie postępowania PRZECIWKO OSOBIE przed upływem terminu przedłuża karalność o 10 lat (art. 102 k.k.).")
     umorzenie_k = st.date_input("Data umorzenia postępowania karnego", value=None, min_value=MIN_DATE)
 
     st.markdown("---")
     wyrok_k = st.date_input("Data wyroku karnego skazującego", value=None, min_value=MIN_DATE)
-    data_wykonania_kary = st.date_input("Data wykonania / zakończenia / darowania kary (do zatarcia)", value=None, min_value=MIN_DATE, help="Od tej daty faktycznie liczy się termin do usunięcia wpisu z KRK (zatarcie).")
+    data_wykonania_kary = st.date_input("Data wykonania / zakończenia / darowania kary (do zatarcia)", value=None, min_value=MIN_DATE, help="Od tej daty liczy się termin zatarcia. Jeśli brak – aplikacja oznaczy wynik jako niepewny (nie zastąpi datą wyroku).")
 
+    # Rodzaj kary: osobno automatyczny termin (art. 107 § 1) i ewentualny wniosek (art. 107 § 4)
     OPCJE_ZATARCIA = {
-        "Grzywna lub ograniczenie wolności (3 lata)": 3,
-        "Pozbawienie wolności do 3 lat (5 lat)": 5,
-        "Pozbawienie wolności powyżej 3 lat (10 lat)": 10
+        "Grzywna": {"auto": 3, "wyjatek": None, "koniec_roku": False},
+        "Kara ograniczenia wolności": {"auto": 3, "wyjatek": None, "koniec_roku": False},
+        "Pozbawienie wolności do 3 lat": {"auto": 5, "wyjatek": 5, "koniec_roku": False},
+        "Pozbawienie wolności powyżej 3 lat": {"auto": 10, "wyjatek": 5, "koniec_roku": False},
     }
-    wybor_zatarcia = st.selectbox("Orzeczona kara (dla zatarcia skazania z art. 107 k.k.)", list(OPCJE_ZATARCIA.keys()), disabled=(wyrok_k is None), help="Rodzaj orzeczonej i wykonanej kary determinuje czas do zatarcia skazania.")
+    wybor_zatarcia = st.selectbox("Orzeczona kara (dla zatarcia z art. 107 k.k.)", list(OPCJE_ZATARCIA.keys()), disabled=(wyrok_k is None), help="Rodzaj kary decyduje o terminie zatarcia z mocy prawa (art. 107 § 1 k.k.).")
 
 st.divider()
 
@@ -335,7 +338,7 @@ if st.button("Przeprowadź analizę", type="primary"):
     if data_czynu is not None:
         wynik_karny = analiza_karna(
             data_czynu, OPCJE_KK[wybor_kk], wszczecie_k, umorzenie_k,
-            data_oceny
+            data_oceny, czy_oskarzenie_prywatne
         )
     else:
         wynik_karny = WynikAnalizyKarne(
@@ -346,9 +349,11 @@ if st.button("Przeprowadź analizę", type="primary"):
     # --- Analiza zatarcia ---
     wynik_zatarcia: WynikAnalizyZatarcia
     if wyrok_k is not None:
+        opcja_zat = OPCJE_ZATARCIA[wybor_zatarcia]
         wynik_zatarcia = analiza_zatarcia(
-            wyrok_k, data_wykonania_kary, OPCJE_ZATARCIA[wybor_zatarcia],
-            data_oceny
+            wyrok_k, data_wykonania_kary,
+            opcja_zat["auto"], data_oceny,
+            opcja_zat["wyjatek"], wybor_zatarcia
         )
     else:
         wynik_zatarcia = WynikAnalizyZatarcia(
@@ -411,22 +416,35 @@ if st.button("Przeprowadź analizę", type="primary"):
                     st.success(f"✅ **{w.nazwa}**: {w.termin.strftime('%d.%m.%Y')}")
                 elif w.status == "W_KRK":
                     st.warning(f"⚠️ **{w.nazwa}**: {w.termin.strftime('%d.%m.%Y')}")
-                
+                elif w.status == "BRAK_DANYCH":
+                    st.error(f"❓ **{w.nazwa}**: dane niewystarczające")
+                elif w.status == "MOZLIWE_WCZEŚNIEJ":
+                    st.info(f"🕓 **{w.nazwa}**: od {w.termin.strftime('%d.%m.%Y')}")
+                else:
+                    st.info(f"ℹ️ **{w.nazwa}**: {w.termin.strftime('%d.%m.%Y')}")
+
                 st.caption(f"📜 {w.podstawa_prawna}")
-                
+
                 if w.zalozenia:
                     with st.expander("🔍 Założenia i przebieg obliczeń"):
                         for z in w.zalozenia:
                             st.write(f"• {z}")
-                
+
                 for o in w.ostrzezenia:
-                    if o.startswith("OSTRZEŻENIE"):
+                    if o.startswith("OSTRZEŻENIE") or o.startswith("Art. 102"):
                         st.warning(o)
                     else:
                         st.info(o)
         else:
             for o in wynik_karny.ostrzezenia + wynik_zatarcia.ostrzezenia:
                 st.info(o)
+
+        # Przypadki nieobsługiwane
+        nieobslugiwane = wynik_karny.nieobslugiwane + wynik_zatarcia.nieobslugiwane
+        if nieobslugiwane:
+            st.subheader("🚧 Przypadki nieobsługiwane")
+            for n in nieobslugiwane:
+                st.warning(n)
 
     with col_res2:
         st.subheader("📅 Karta dat brzegowych")

@@ -306,7 +306,7 @@ def test_karna_wszczenie_przed_uplywem_przedluza_o_10_lat():
     )
     w = wynik.wyniki[0]
     assert w.termin == date(2040, 1, 1)
-    assert any("Przedłużono o 10 lat" in z for z in w.zalozenia)
+    assert any("przedłużona o 10 lat" in z.lower() for z in w.zalozenia)
 
 
 def test_karna_wszczenie_po_uplywie():
@@ -320,7 +320,7 @@ def test_karna_wszczenie_po_uplywie():
     )
     w = wynik.wyniki[0]
     assert w.termin == date(2025, 1, 1)
-    assert any("po pierwotnym upływie" in o for o in w.ostrzezenia)
+    assert any("po upływie" in o for o in w.ostrzezenia)
 
 
 def test_karna_wygasla():
@@ -350,34 +350,63 @@ def test_karna_brak_daty_czynu():
     assert "Brak daty czynu" in wynik.bledy[0]
 
 
+def test_karna_oskarzenie_prywatne_nieobslugiwane():
+    """Oskarżenie prywatne -> zgłoszony przypadek nieobsługiwany."""
+    wynik = analiza_karna(
+        data_czynu=date(2020, 1, 1),
+        lata_karne=5,
+        data_wszcz_k=None,
+        data_umor_k=None,
+        data_oceny=date(2025, 1, 1),
+        czy_oskarzenie_prywatne=True
+    )
+    assert any("oskarżenia prywatnego" in n for n in wynik.nieobslugiwane)
+
+
+def test_karna_brak_wszczecia_ostrzezenie():
+    """Brak daty wszczęcia -> ostrzeżenie o niepełnym wyniku."""
+    wynik = analiza_karna(
+        data_czynu=date(2020, 1, 1),
+        lata_karne=10,
+        data_wszcz_k=None,
+        data_umor_k=None,
+        data_oceny=date(2025, 1, 1)
+    )
+    w = wynik.wyniki[0]
+    assert any("Brak daty wszczęcia" in o for o in w.ostrzezenia)
+
+
 # ─────────────────────────────────────────────
-# TESTY: analiza_zatarcia (bez zmian)
+# TESTY: analiza_zatarcia (art. 107 k.k.)
 # ─────────────────────────────────────────────
 def test_zatarcie_z_wykonaniem():
-    """Wyrok 2020, wykonanie 2023, 5 lat -> 2028."""
+    """Wyrok 2020, wykonanie 2023, 5 lat -> 2028 (automatyczne)."""
     wynik = analiza_zatarcia(
         data_wyroku_k=date(2020, 1, 1),
         data_wykonania=date(2023, 1, 1),
-        lata_zat=5,
+        lata_zatarcia=5,
+        data_oceny=date(2025, 1, 1)
+    )
+    # Bez opcji wyjątku -> 1 wynik
+    assert len(wynik.wyniki) == 1
+    w = wynik.wyniki[0]
+    assert w.termin == date(2028, 1, 1)
+    assert "107 § 1" in w.podstawa_prawna
+    assert w.status == "W_KRK"
+
+
+def test_zatarcie_bez_wykonania_brak_danych():
+    """Brak daty wykonania -> BRAK_DANYCH (bez substytucji daty wyroku)."""
+    wynik = analiza_zatarcia(
+        data_wyroku_k=date(2020, 1, 1),
+        data_wykonania=None,
+        lata_zatarcia=5,
         data_oceny=date(2025, 1, 1)
     )
     assert len(wynik.wyniki) == 1
     w = wynik.wyniki[0]
-    assert w.termin == date(2028, 1, 1)
-    assert any("wykonania" in z for z in w.zalozenia)
-
-
-def test_zatarcie_bez_wykonania_orientacyjnie():
-    """Wyrok 2020, brak wykonania, 5 lat -> orientacyjnie od wyroku."""
-    wynik = analiza_zatarcia(
-        data_wyroku_k=date(2020, 1, 1),
-        data_wykonania=None,
-        lata_zat=5,
-        data_oceny=date(2025, 1, 1)
-    )
-    w = wynik.wyniki[0]
-    assert w.termin == date(2025, 1, 1)
-    assert any("OSTRZEŻENIE" in o for o in w.ostrzezenia)
+    assert w.status == "BRAK_DANYCH"
+    assert any("Brak daty wykonania" in o for o in w.ostrzezenia)
 
 
 def test_zatarcie_zatarte():
@@ -385,7 +414,7 @@ def test_zatarcie_zatarte():
     wynik = analiza_zatarcia(
         data_wyroku_k=date(2010, 1, 1),
         data_wykonania=date(2012, 1, 1),
-        lata_zat=5,
+        lata_zatarcia=5,
         data_oceny=date(2025, 1, 1)
     )
     w = wynik.wyniki[0]
@@ -398,7 +427,7 @@ def test_zatarcie_w_krk():
     wynik = analiza_zatarcia(
         data_wyroku_k=date(2020, 1, 1),
         data_wykonania=date(2023, 1, 1),
-        lata_zat=10,
+        lata_zatarcia=10,
         data_oceny=date(2025, 1, 1)
     )
     w = wynik.wyniki[0]
@@ -406,12 +435,31 @@ def test_zatarcie_w_krk():
     assert w.termin == date(2033, 1, 1)
 
 
+def test_zatarcie_wyjatek_wczesniej():
+    """Zatarcie w drodze wyjątku (5 lat) wcześniejsze niż automatyczne (10)."""
+    wynik = analiza_zatarcia(
+        data_wyroku_k=date(2020, 1, 1),
+        data_wykonania=date(2023, 1, 1),
+        lata_zatarcia=10,
+        data_oceny=date(2025, 1, 1),
+        lata_zatarcia_wyjatek=5,
+        rodzaj_kary="Pozbawienie wolności powyżej 3 lat"
+    )
+    # 2 wyniki: automatyczny (2033) i wyjątek (2028)
+    assert len(wynik.wyniki) == 2
+    terminy = {w.termin for w in wynik.wyniki}
+    assert date(2033, 1, 1) in terminy
+    assert date(2028, 1, 1) in terminy
+    wyj = [w for w in wynik.wyniki if "107 § 4" in w.podstawa_prawna][0]
+    assert wyj.status == "MOZLIWE_WCZEŚNIEJ"
+
+
 def test_zatarcie_brak_wyroku():
     """Brak wyroku -> pusty wynik (nie błąd)."""
     wynik = analiza_zatarcia(
         data_wyroku_k=None,
         data_wykonania=None,
-        lata_zat=5,
+        lata_zatarcia=5,
         data_oceny=date(2025, 1, 1)
     )
     assert len(wynik.wyniki) == 0
