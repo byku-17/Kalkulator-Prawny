@@ -1,2 +1,2 @@
-streamlit
-python-dateutil
+streamlit==1.57.0
+python-dateutil==2.9.0.post0
