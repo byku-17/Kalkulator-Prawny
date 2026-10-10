@@ -8,11 +8,16 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from app import waliduj_dane
 
 
+# ─────────────────────────────────────────────
+# TESTY: sfera karna / egzekucja / umorzenie
+# ─────────────────────────────────────────────
 def test_umorzenie_egzekucji_bez_wszczenia():
     """Umorzenie egzekucji bez daty wszczęcia -> błąd."""
     bledy, _ = waliduj_dane(
         data_zawarcia_umowy=date(2023, 1, 1),
         data_wymagalnosci=date(2023, 1, 1),
+        data_zdarzenia=None,
+        data_dowiedzenia=None,
         wpłaty=[],
         data_wyroku_cywilnego=None,
         data_wszcz_egzekucji=None,
@@ -32,6 +37,8 @@ def test_wykonanie_kary_bez_wyroku():
     bledy, _ = waliduj_dane(
         data_zawarcia_umowy=None,
         data_wymagalnosci=None,
+        data_zdarzenia=None,
+        data_dowiedzenia=None,
         wpłaty=[],
         data_wyroku_cywilnego=None,
         data_wszcz_egzekucji=None,
@@ -51,6 +58,8 @@ def test_umorzenie_postepowania_bez_wszczenia():
     bledy, _ = waliduj_dane(
         data_zawarcia_umowy=None,
         data_wymagalnosci=None,
+        data_zdarzenia=None,
+        data_dowiedzenia=None,
         wpłaty=[],
         data_wyroku_cywilnego=None,
         data_wszcz_egzekucji=None,
@@ -70,6 +79,8 @@ def test_kolejnosc_dat_egzekucja_przed_wymagalnoscia():
     bledy, _ = waliduj_dane(
         data_zawarcia_umowy=date(2023, 1, 1),
         data_wymagalnosci=date(2023, 6, 1),
+        data_zdarzenia=None,
+        data_dowiedzenia=None,
         wpłaty=[],
         data_wyroku_cywilnego=None,
         data_wszcz_egzekucji=date(2023, 1, 1),
@@ -89,6 +100,8 @@ def test_kolejnosc_dat_wyrok_przed_wymagalnoscia():
     bledy, _ = waliduj_dane(
         data_zawarcia_umowy=date(2023, 1, 1),
         data_wymagalnosci=date(2023, 6, 1),
+        data_zdarzenia=None,
+        data_dowiedzenia=None,
         wpłaty=[],
         data_wyroku_cywilnego=date(2023, 1, 1),
         data_wszcz_egzekucji=None,
@@ -108,6 +121,8 @@ def test_kolejnosc_dat_wplata_przed_wymagalnoscia():
     bledy, _ = waliduj_dane(
         data_zawarcia_umowy=date(2023, 1, 1),
         data_wymagalnosci=date(2023, 6, 1),
+        data_zdarzenia=None,
+        data_dowiedzenia=None,
         wpłaty=[date(2023, 1, 1)],
         data_wyroku_cywilnego=None,
         data_wszcz_egzekucji=None,
@@ -127,6 +142,8 @@ def test_kolejnosc_dat_wszczenie_karne_przed_czynem():
     bledy, _ = waliduj_dane(
         data_zawarcia_umowy=None,
         data_wymagalnosci=None,
+        data_zdarzenia=None,
+        data_dowiedzenia=None,
         wpłaty=[],
         data_wyroku_cywilnego=None,
         data_wszcz_egzekucji=None,
@@ -146,6 +163,8 @@ def test_kolejnosc_dat_umorzenie_karne_przed_wszczeniem():
     bledy, _ = waliduj_dane(
         data_zawarcia_umowy=None,
         data_wymagalnosci=None,
+        data_zdarzenia=None,
+        data_dowiedzenia=None,
         wpłaty=[],
         data_wyroku_cywilnego=None,
         data_wszcz_egzekucji=None,
@@ -165,6 +184,8 @@ def test_kolejnosc_dat_wykonanie_kary_przed_wyrokiem():
     bledy, _ = waliduj_dane(
         data_zawarcia_umowy=None,
         data_wymagalnosci=None,
+        data_zdarzenia=None,
+        data_dowiedzenia=None,
         wpłaty=[],
         data_wyroku_cywilnego=None,
         data_wszcz_egzekucji=None,
@@ -184,6 +205,8 @@ def test_umorzenie_egzekucji_przed_wszczeniem():
     bledy, _ = waliduj_dane(
         data_zawarcia_umowy=date(2023, 1, 1),
         data_wymagalnosci=date(2023, 1, 1),
+        data_zdarzenia=None,
+        data_dowiedzenia=None,
         wpłaty=[],
         data_wyroku_cywilnego=None,
         data_wszcz_egzekucji=date(2023, 6, 1),
@@ -203,6 +226,8 @@ def test_poprawne_dane_cywilne_bez_karnych():
     bledy, ostrzezenia = waliduj_dane(
         data_zawarcia_umowy=date(2023, 1, 1),
         data_wymagalnosci=date(2023, 1, 1),
+        data_zdarzenia=None,
+        data_dowiedzenia=None,
         wpłaty=[date(2023, 6, 1)],
         data_wyroku_cywilnego=date(2024, 1, 1),
         data_wszcz_egzekucji=date(2024, 6, 1),
@@ -222,6 +247,8 @@ def test_poprawne_dane_karne_bez_cywilnych():
     bledy, ostrzezenia = waliduj_dane(
         data_zawarcia_umowy=None,
         data_wymagalnosci=None,
+        data_zdarzenia=None,
+        data_dowiedzenia=None,
         wpłaty=[],
         data_wyroku_cywilnego=None,
         data_wszcz_egzekucji=None,
@@ -241,6 +268,8 @@ def test_ostrzezenie_czyn_pozniej_niz_wymagalnosc():
     bledy, ostrzezenia = waliduj_dane(
         data_zawarcia_umowy=date(2023, 1, 1),
         data_wymagalnosci=date(2023, 1, 1),
+        data_zdarzenia=None,
+        data_dowiedzenia=None,
         wpłaty=[],
         data_wyroku_cywilnego=None,
         data_wszcz_egzekucji=None,
@@ -253,7 +282,7 @@ def test_ostrzezenie_czyn_pozniej_niz_wymagalnosc():
         czy_delikt=False
     )
     assert len(bledy) == 0
-    assert any("Data czynu jest późniejsza niż cywilna data wymagalności" in o for o in ostrzezenia)
+    assert any("Data czynu jest późniejsza niż cywilna data bazowa" in o for o in ostrzezenia)
 
 
 def test_wszystkie_bledy_naraz():
@@ -261,6 +290,8 @@ def test_wszystkie_bledy_naraz():
     bledy, _ = waliduj_dane(
         data_zawarcia_umowy=date(2023, 1, 1),
         data_wymagalnosci=date(2023, 6, 1),
+        data_zdarzenia=None,
+        data_dowiedzenia=None,
         wpłaty=[date(2023, 1, 1)],  # wpłata przed wymagalnością
         data_wyroku_cywilnego=date(2023, 1, 1),  # wyrok przed wymagalnością
         data_wszcz_egzekucji=date(2023, 1, 1),  # egzekucja przed wymagalnością
@@ -281,6 +312,8 @@ def test_wymagalnosc_przed_zawarciem():
     bledy, _ = waliduj_dane(
         data_zawarcia_umowy=date(2023, 6, 1),
         data_wymagalnosci=date(2023, 1, 1),
+        data_zdarzenia=None,
+        data_dowiedzenia=None,
         wpłaty=[],
         data_wyroku_cywilnego=None,
         data_wszcz_egzekucji=None,
@@ -295,11 +328,37 @@ def test_wymagalnosc_przed_zawarciem():
     assert any("wymagalności nie może być wcześniejsza niż data zawarcia" in b for b in bledy)
 
 
-def test_delikt_wplata_przed_dowiedzeniem():
-    """Dla deliktu: wpłata przed dowiedzeniem się o szkodzie -> błąd."""
+# ─────────────────────────────────────────────
+# TESTY: delikty (osobne daty zdarzenia i dowiedzenia)
+# ─────────────────────────────────────────────
+def test_delikt_dowiedzenie_przed_zdarzeniem():
+    """Delikt: dowiedzenie przed zdarzeniem -> błąd."""
     bledy, _ = waliduj_dane(
         data_zawarcia_umowy=None,
-        data_wymagalnosci=date(2023, 6, 1),
+        data_wymagalnosci=None,
+        data_zdarzenia=date(2023, 6, 1),
+        data_dowiedzenia=date(2023, 1, 1),
+        wpłaty=[],
+        data_wyroku_cywilnego=None,
+        data_wszcz_egzekucji=None,
+        data_umor_egzekucji=None,
+        data_czynu=None,
+        wszczecie_k=None,
+        umorzenie_k=None,
+        wyrok_k=None,
+        data_wykonania_kary=None,
+        czy_delikt=True
+    )
+    assert any("dowiedzenia się o szkodzie nie może być wcześniejsza niż data zdarzenia" in b for b in bledy)
+
+
+def test_delikt_wplata_przed_zdarzeniem():
+    """Delikt: wpłata przed zdarzeniem -> błąd."""
+    bledy, _ = waliduj_dane(
+        data_zawarcia_umowy=None,
+        data_wymagalnosci=None,
+        data_zdarzenia=date(2023, 6, 1),
+        data_dowiedzenia=date(2023, 6, 1),
         wpłaty=[date(2023, 1, 1)],
         data_wyroku_cywilnego=None,
         data_wszcz_egzekucji=None,
@@ -312,6 +371,27 @@ def test_delikt_wplata_przed_dowiedzeniem():
         czy_delikt=True
     )
     assert any("Wpłata" in b and "nie może być wcześniejsza" in b for b in bledy)
+
+
+def test_delikt_poprawne_dane():
+    """Delikt: poprawne dane -> brak błędów."""
+    bledy, _ = waliduj_dane(
+        data_zawarcia_umowy=None,
+        data_wymagalnosci=None,
+        data_zdarzenia=date(2023, 1, 1),
+        data_dowiedzenia=date(2023, 6, 1),
+        wpłaty=[],
+        data_wyroku_cywilnego=None,
+        data_wszcz_egzekucji=None,
+        data_umor_egzekucji=None,
+        data_czynu=None,
+        wszczecie_k=None,
+        umorzenie_k=None,
+        wyrok_k=None,
+        data_wykonania_kary=None,
+        czy_delikt=True
+    )
+    assert len(bledy) == 0
 
 
 if __name__ == "__main__":

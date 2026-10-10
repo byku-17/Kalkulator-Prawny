@@ -3,8 +3,10 @@ from datetime import date
 from dateutil.relativedelta import relativedelta
 from obliczenia import (
     analiza_cywilna,
+    analiza_deliktowa,
     analiza_karna,
     analiza_zatarcia,
+    TypOdpowiedzialnosci,
     WynikAnalizyCywilnej,
     WynikAnalizyKarne,
     WynikAnalizyZatarcia,
@@ -85,27 +87,43 @@ kategoria_podmiotu = st.selectbox(
 )
 
 czy_delikt = "Deficyt" in kategoria_podmiotu
+czy_pracownik = "pracownik" in kategoria_podmiotu
 czy_przestepstwo = False
+czy_umyslne = False
 
 if not czy_delikt:
+    typ_odpowiedzialnosci = TypOdpowiedzialnosci.UMOWNA
     st.info("📌 **Podstawa cywilna:** Roszczenie związane z prowadzeniem działalności gospodarczej. Co do zasady: **3 lata** (art. 118 k.c.).")
     lata_cywilne_baza = 3
     podstawa_cywilna = "Art. 118 k.c. (działalność gospodarcza)"
 else:
+    typ_odpowiedzialnosci = (
+        TypOdpowiedzialnosci.PRACOWNICZA if czy_pracownik else TypOdpowiedzialnosci.DELIKTOWA
+    )
     rodzaj_zdarzenia = st.selectbox(
         "Rodzaj zdarzenia deficytowego",
         ["Przywłaszczenie zaliczek / zbiórek", "Nieuprawnione wypłaty BLIK / z karty", "Kradzież gotówki / karty", "Fałszowanie dowodów bankowania", "Umowy fikcyjne / na słupa"]
     )
     czy_przestepstwo = st.checkbox("Czy szkoda bezpośrednio wynika ze zbrodni lub występku (przestępstwa)?")
+    czy_umyslne = st.checkbox("Czy szkoda została wyrządzona umyślnie?", help="Dotyczy odpowiedzialności pracowniczej – umyślność wpływa na zakres odpowiedzialności (art. 122 k.p.).")
+
+    if czy_pracownik:
+        st.info(
+            "📌 **Reżim pracowniczy:** Odpowiedzialność materialna pracownika. "
+            "Co do zasady: **3 lata** od dowiedzenia się o szkodzie i sprawcy (art. 291 § 1 k.p.)."
+        )
+        podstawa_cywilna = "Art. 291 § 1 k.p. (odpowiedzialność pracownicza)"
+        lata_cywilne_baza = 3
+    else:
+        podstawa_cywilna = "Art. 442¹ k.c. (szkoda deliktowa)"
+        lata_cywilne_baza = 3
 
     if czy_przestepstwo:
         st.error("📌 **Podstawa cywilna:** Szkoda ze zbrodni lub występku. Przedawnienie: **20 lat** od popełnienia przestępstwa (art. 442¹ § 2 k.c.).")
         lata_cywilne_baza = 20
         podstawa_cywilna = "Art. 442¹ § 2 k.c. (szkoda z przestępstwa)"
-    else:
-        st.warning("📌 **Podstawa cywilna:** Czyn niedozwolony bez kwalifikacji karnej. Przedawnienie: **3 lata** od dnia dowiedzenia się o szkodzie ORAZ o osobie obowiązanej do jej naprawienia (art. 442¹ § 1 k.c.).")
-        lata_cywilne_baza = 3
-        podstawa_cywilna = "Art. 442¹ § 1 k.c. (szkoda deliktowa)"
+    elif not czy_pracownik:
+        st.warning("📌 **Podstawa cywilna:** Czyn niedozwolony bez kwalifikacji karnej. Przedawnienie: **3 lata** od dnia dowiedzenia się o szkodzie ORAZ o osobie obowiązanej do jej naprawienia, nie dłużej niż 10 lat od zdarzenia (art. 442¹ § 1 k.c.).")
 
 # ─────────────────────────────────────────────
 # 2. WPROWADZANIE DAT
@@ -115,14 +133,18 @@ col1, col2 = st.columns(2)
 with col1:
     st.subheader("Oś czasu cywilna")
     
+    data_zdarzenia = None
     if not czy_delikt:
         # Umowy: osobne daty zawarcia i wymagalności
         data_zawarcia_umowy = st.date_input("Data zawarcia umowy", value=None, min_value=MIN_DATE, help="Data podpisania umowy (dla przepisów przejściowych 2018 r.).")
         data_wymagalnosci = st.date_input("Data wymagalności roszczenia (pierwsza zaległa rata / termin płatności)", value=None, min_value=MIN_DATE, help="Data, od której roszczenie stało się wymagalne – początek biegu przedawnienia.")
+        data_dowiedzenia = None
     else:
-        # Delikty: data dowiedzenia się o szkodzie i sprawcy
+        # Delikty: osobna data zdarzenia i data dowiedzenia się o szkodzie i sprawcy
         data_zawarcia_umowy = None
-        data_wymagalnosci = st.date_input("Data dowiedzenia się o szkodzie i sprawcy", value=None, min_value=MIN_DATE, help="Data, od której biegł przedawnienie deliktowe (art. 442¹ k.c.).")
+        data_wymagalnosci = None
+        data_zdarzenia = st.date_input("Data zdarzenia wywołującego szkodę", value=None, min_value=MIN_DATE, help="Data samego czynu/zdarzenia, w wyniku którego powstała szkoda (moment wyrządzenia szkody).")
+        data_dowiedzenia = st.date_input("Data dowiedzenia się o szkodzie i sprawcy", value=None, min_value=MIN_DATE, help="Data, w której poszkodowany/pracodawca uzyskał wiedzę o szkodzie ORAZ o osobie zobowiązanej do jej naprawienia (art. 442¹ § 1 k.c. / art. 291 § 1 k.p.).")
     
     # Wpłaty - lista dat
     st.markdown("**Wpłaty / uznania długu** (można dodać wiele):")
@@ -181,7 +203,7 @@ st.divider()
 # 4. WALIDACJA DANYCH WEJŚCIOWYCH
 # ─────────────────────────────────────────────
 def waliduj_dane(
-    data_zawarcia_umowy, data_wymagalnosci, wpłaty,
+    data_zawarcia_umowy, data_wymagalnosci, data_zdarzenia, data_dowiedzenia, wpłaty,
     data_wyroku_cywilnego, data_wszcz_egzekucji, data_umor_egzekucji,
     data_czynu, wszczecie_k, umorzenie_k, wyrok_k, data_wykonania_kary,
     czy_delikt
@@ -193,31 +215,36 @@ def waliduj_dane(
     bledy = []
     ostrzezenia = []
 
-    # Sprawdzamy spójność tylko jeśli podano dane cywilne
-    if data_wymagalnosci is not None:
-        if not czy_delikt:
-            # Umowy
+    if not czy_delikt:
+        # --- Umowy ---
+        if data_wymagalnosci is not None:
             if data_zawarcia_umowy and data_wymagalnosci < data_zawarcia_umowy:
                 bledy.append("🔴 Data wymagalności nie może być wcześniejsza niż data zawarcia umowy.")
             
-            # Wpłaty
             for w in wpłaty:
                 if w < data_wymagalnosci:
                     bledy.append(f"🔴 Wpłata {w.strftime('%d.%m.%Y')} nie może być wcześniejsza niż data wymagalności.")
-        else:
-            # Delikty
-            for w in wpłaty:
-                if w < data_wymagalnosci:
-                    bledy.append(f"🔴 Wpłata {w.strftime('%d.%m.%Y')} nie może być wcześniejsza niż data dowiedzenia się o szkodzie.")
+            
+            if data_wyroku_cywilnego and data_wyroku_cywilnego < data_wymagalnosci:
+                bledy.append("🔴 Wyrok cywilny nie może być wcześniejszy niż data wymagalności.")
+            
+            if data_wszcz_egzekucji and data_wszcz_egzekucji < data_wymagalnosci:
+                bledy.append("🔴 Egzekucja nie może być wszczęta przed datą wymagalności.")
+    else:
+        # --- Delikty / odpowiedzialność pracownicza ---
+        if data_zdarzenia is not None and data_dowiedzenia is not None and data_dowiedzenia < data_zdarzenia:
+            bledy.append("🔴 Data dowiedzenia się o szkodzie nie może być wcześniejsza niż data zdarzenia.")
 
-        # --- Wspólne dla obu (tylko jeśli jest data_wymagalnosci) ---
-        if data_wyroku_cywilnego and data_wyroku_cywilnego < data_wymagalnosci:
-            bledy.append("🔴 Wyrok cywilny nie może być wcześniejszy niż data wymagalności / dowiedzenia się o szkodzie.")
-        
-        if data_wszcz_egzekucji and data_wszcz_egzekucji < data_wymagalnosci:
-            bledy.append("🔴 Egzekucja nie może być wszczęta przed datą wymagalności / dowiedzenia się o szkodzie.")
+        for w in wpłaty:
+            ref = data_dowiedzenia if data_dowiedzenia else data_zdarzenia
+            if ref and w < ref:
+                bledy.append(f"🔴 Wpłata {w.strftime('%d.%m.%Y')} nie może być wcześniejsza niż data zdarzenia / dowiedzenia się o szkodzie.")
 
-    # --- Egzekucja/umorzenie (sprawdzamy niezależnie od data_wymagalnosci) ---
+        for d, nazwa in [(data_wyroku_cywilnego, "Wyrok cywilny"), (data_wszcz_egzekucji, "Egzekucja")]:
+            if d and data_zdarzenia and d < data_zdarzenia:
+                bledy.append(f"🔴 {nazwa} nie może być wcześniejszy/a niż data zdarzenia wywołującego szkodę.")
+
+    # --- Egzekucja/umorzenie (niezależnie) ---
     if data_wszcz_egzekucji and data_umor_egzekucji and data_umor_egzekucji < data_wszcz_egzekucji:
         bledy.append("🔴 Umorzenie egzekucji nie może nastąpić przed jej wszczęciem.")
     
@@ -240,9 +267,10 @@ def waliduj_dane(
     if wyrok_k is None and data_wykonania_kary is not None:
         bledy.append("🔴 Data wykonania kary wymaga daty wyroku skazującego.")
 
-    # --- Ostrzeżenia (tylko jeśli obie daty są podane) ---
-    if data_czynu and data_wymagalnosci and data_czynu > data_wymagalnosci:
-        ostrzezenia.append("⚠️ Data czynu jest późniejsza niż cywilna data wymagalności. Sprawdź poprawność.")
+    # --- Ostrzeżenia ---
+    ref_cywilna = data_wymagalnosci if not czy_delikt else data_dowiedzenia
+    if data_czynu and ref_cywilna and data_czynu > ref_cywilna:
+        ostrzezenia.append("⚠️ Data czynu jest późniejsza niż cywilna data bazowa. Sprawdź poprawność.")
 
     if data_wyroku_cywilnego and data_umor_egzekucji and data_umor_egzekucji < data_wyroku_cywilnego:
         ostrzezenia.append("⚠️ Umorzenie egzekucji jest wcześniejsze niż wyrok cywilny. Sprawdź daty.")
@@ -255,7 +283,7 @@ def waliduj_dane(
 # ─────────────────────────────────────────────
 if st.button("Przeprowadź analizę", type="primary"):
     bledy, ostrzezenia = waliduj_dane(
-        data_zawarcia_umowy, data_wymagalnosci, wpłaty,
+        data_zawarcia_umowy, data_wymagalnosci, data_zdarzenia, data_dowiedzenia, wpłaty,
         data_wyroku_cywilnego, data_wszcz_egzekucji, data_umor_egzekucji,
         data_czynu, wszczecie_k, umorzenie_k, wyrok_k, data_wykonania_kary,
         czy_delikt
@@ -273,20 +301,34 @@ if st.button("Przeprowadź analizę", type="primary"):
 
     data_oceny = date.today()
 
-    # --- Analiza cywilna ---
+    # --- Analiza cywilna (umowy) lub deliktowa (szkody) ---
     wynik_cywilny: WynikAnalizyCywilnej
-    if data_wymagalnosci is not None:
-        wynik_cywilny = analiza_cywilna(
-            data_zawarcia_umowy, data_wymagalnosci, wpłaty,
-            data_wyroku_cywilnego, data_wszcz_egzekucji, data_umor_egzekucji,
-            lata_cywilne_baza, podstawa_cywilna, czy_delikt,
-            data_oceny
-        )
+    if not czy_delikt:
+        if data_wymagalnosci is not None:
+            wynik_cywilny = analiza_cywilna(
+                data_zawarcia_umowy, data_wymagalnosci, wpłaty,
+                data_wyroku_cywilnego, data_wszcz_egzekucji, data_umor_egzekucji,
+                lata_cywilne_baza, podstawa_cywilna, czy_delikt,
+                data_oceny
+            )
+        else:
+            wynik_cywilny = WynikAnalizyCywilnej(
+                bledy=[],
+                ostrzezenia=["Analiza cywilna pominięta: brak daty wymagalności."]
+            )
     else:
-        wynik_cywilny = WynikAnalizyCywilnej(
-            bledy=[],
-            ostrzezenia=["Analiza cywilna pominięta: brak daty wymagalności / dowiedzenia się o szkodzie."]
-        )
+        if data_zdarzenia is not None:
+            wynik_cywilny = analiza_deliktowa(
+                data_zdarzenia, data_dowiedzenia, czy_przestepstwo, czy_umyslne,
+                typ_odpowiedzialnosci, wpłaty,
+                data_wyroku_cywilnego, data_wszcz_egzekucji, data_umor_egzekucji,
+                data_oceny
+            )
+        else:
+            wynik_cywilny = WynikAnalizyCywilnej(
+                bledy=[],
+                ostrzezenia=["Analiza szkody pominięta: brak daty zdarzenia wywołującego szkodę."]
+            )
 
     # --- Analiza karna ---
     wynik_karny: WynikAnalizyKarne
