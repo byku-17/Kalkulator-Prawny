@@ -129,6 +129,25 @@ def test_cywilna_bez_reguly_konca_roku_przed_2018():
     assert any("stare" in z.lower() or "bez końca roku" in z.lower() for z in w.zalozenia)
 
 
+def test_cywilna_rezim_wedlug_wymagalnosci():
+    """Umowa przed 2018, ale wymagalność po 09.07.2018 -> przepisy nowe (koniec roku)."""
+    wynik = analiza_cywilna(
+        data_zawarcia_umowy=date(2015, 1, 1),
+        data_wymagalnosci=date(2019, 1, 1),
+        wpłaty=[],
+        data_wyroku_cywilnego=None,
+        data_wszcz_egzekucji=None,
+        data_umor_egzekucji=None,
+        lata_baza=3,
+        podstawa_prawna="Art. 118 k.c.",
+        data_oceny=date(2025, 1, 1)
+    )
+    w = wynik.wyniki[0]
+    # 3 lata od 2019-01-01 = 2022-01-01 -> koniec roku 2022 (reżim wg wymagalności)
+    assert w.termin == date(2022, 12, 31)
+    assert any("NOWE" in z for z in w.zalozenia)
+
+
 def test_cywilna_delikt_bez_reguly_konca_roku():
     """Szkoda deliktowa (art. 442¹) -> bez reguły końca roku (przez analiza_deliktowa)."""
     wynik = analiza_deliktowa(

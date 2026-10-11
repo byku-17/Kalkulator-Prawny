@@ -46,7 +46,7 @@ obliczeniową oddzieloną od interfejsu i pokrytą testami jednostkowymi.
 | Zagadnienie | Podstawa | Zastosowana reguła |
 |---|---|---|
 | Termin ogólny (działalność gospodarcza) | art. 118 k.c. | 3 lata od wymagalności |
-| Przepisy przejściowe 2018 | art. 118 k.c. (nowelizacja) | umowy przed 09.07.2018 – bez końca roku; po – z końcem roku |
+| Przepisy przejściowe 2018 | art. 118 k.c. (nowelizacja) | reżim wg daty wymagalności: przed 09.07.2018 – bez końca roku; od 09.07.2018 – z końcem roku |
 | Uznanie długu / wpłata | art. 123 k.c. | nowy bieg od daty uznania |
 | Wszczęcie egzekucji | art. 124 k.c. | zawieszenie biegu |
 | Umorzenie egzekucji | art. 124 § 2 k.c. | bieg od nowa od umorzenia |
@@ -157,12 +157,12 @@ Zakres testów:
 
 | Plik | Zakres | Liczba |
 |---|---|---|
-| `tests/test_obliczenia.py` | logika umowna, karna, zatarcie | 35 |
+| `tests/test_obliczenia.py` | logika umowna, karna, zatarcie | 36 |
 | `tests/test_deliktowa.py` | szkody / odpowiedzialność pracownicza | 21 |
 | `tests/test_validacja.py` | walidacja danych wejściowych | 21 |
 | `tests/test_podstawy.py` | spójność podstaw prawnych (stałe) | 5 |
 | `tests/test_app_smoke.py` | dymny test interfejsu (AppTest) | 4 |
-| **Razem** | | **86** |
+| **Razem** | | **87** |
 
 Lint kodu (Ruff):
 

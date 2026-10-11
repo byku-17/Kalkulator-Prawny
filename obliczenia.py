@@ -99,14 +99,17 @@ def _format_data(d: Optional[date]) -> str:
     return d.strftime("%d.%m.%Y")
 
 
-def _czy_stara_przedawnienie(data_zawarcia: date) -> bool:
+def _czy_stara_przedawnienie(data_odniesienia: date) -> bool:
     """
-    Sprawdza czy na umowę mają zastosowanie przepisy stare (przed nowelizacją 2018).
-    Zgodnie z art. 118 k.c. w wersji przed 09.07.2018:
-    - Umowy zawarte przed 09.07.2018: przepisy stare (brak końca roku)
-    - Umowy zawarte po 09.07.2018: przepisy nowe (koniec roku)
+    Sprawdza, czy stosuje się przepisy stare (przed nowelizacją z 13.04.2018,
+    obowiązującą od 09.07.2018).
+
+    Kryterium: data powstania / wymagalności roszczenia (początek biegu przedawnienia),
+    a nie data zawarcia umowy (art. 5 ustawy nowelizującej w zw. z art. 120 k.c.).
+    Roszczenie wymagalne przed 09.07.2018 -> przepisy stare (bez końca roku);
+    wymagalne od 09.07.2018 -> przepisy nowe (z końcem roku).
     """
-    return data_zawarcia < date(2018, 7, 9)
+    return data_odniesienia < date(2018, 7, 9)
 
 
 def _oblicz_termin_koncowy(start: date, lata: int, stosowac_koniec_roku: bool) -> date:
@@ -155,13 +158,15 @@ def analiza_cywilna(
     # Buduj oś czasu zdarzeń
     zdarzenia: list[ZdarzeniePrzedawnienia] = []
 
-    # Reżim przedawnienia (stary/nowy) na podstawie daty ZAWARCIA umowy.
-    stary_rezim = _czy_stara_przedawnienie(data_zawarcia_umowy)
+    # Reżim przedawnienia (stary/nowy) na podstawie daty WYMAGALNOŚCI (powstania
+    # roszczenia / początku biegu), a nie daty zawarcia umowy (art. 5 ustawy
+    # nowelizującej z 13.04.2018 w zw. z art. 120 k.c.).
+    stary_rezim = _czy_stara_przedawnienie(data_wymagalnosci)
+    wynik.zalozenia.append(f"Data zawarcia umowy: {_format_data(data_zawarcia_umowy)}")
     wynik.zalozenia.append(
-        f"Data zawarcia umowy: {_format_data(data_zawarcia_umowy)} – "
-        f"{'przepisy STARE (przed 09.07.2018, bez końca roku)' if stary_rezim else 'przepisy NOWE (po 09.07.2018, z końcem roku)'}"
+        f"Data wymagalności (początek biegu): {_format_data(data_wymagalnosci)} – "
+        f"{'przepisy STARE (roszczenie wymagalne przed 09.07.2018, bez końca roku)' if stary_rezim else 'przepisy NOWE (roszczenie wymagalne od 09.07.2018, z końcem roku)'}"
     )
-    wynik.zalozenia.append(f"Data wymagalności (początek biegu): {_format_data(data_wymagalnosci)}")
 
     # 1. Start biegu
     zdarzenia.append(ZdarzeniePrzedawnienia(
