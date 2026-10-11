@@ -15,7 +15,7 @@ Legenda statusu:
 | Artykuł | Reguła w aplikacji | Miejsce | Status |
 |---|---|---|---|
 | art. 118 § 1 k.c. | 3 lata (działalność gosp.) + reguła końca roku | `analiza_cywilna`, `_oblicz_termin_koncowy` | ✅ zweryfikowany (Dz.U.2026.795) |
-| art. 120 k.c. | bieg od wymagalności (kryterium przepisów przejściowych) | `_czy_stara_przedawnienie` | ⚠️ do weryfikacji |
+| art. 120 § 1 k.c. | bieg od wymagalności (kryterium przepisów przejściowych) | `_czy_stara_przedawnienie`, `analiza_cywilna` | ✅ zweryfikowany (Dz.U.2026.795) |
 | art. 123 § 1 pkt 1 k.c. | przerwanie – czynność przed sądem/organem egzekwującym (egzekucja) | `analiza_cywilna`, `analiza_deliktowa` | ✅ zweryfikowany (Dz.U.2026.795) |
 | art. 123 § 1 pkt 2 k.c. | przerwanie – uznanie roszczenia (wpłata) | `analiza_cywilna`, `analiza_deliktowa` | ✅ zweryfikowany |
 | art. 123 § 1 pkt 3 k.c. | uchylony – mediacja nie modelowana | — | ✅ zweryfikowany |
@@ -27,7 +27,7 @@ Legenda statusu:
 | art. 442¹ § 3 k.c. | szkoda na osobie (min. 3 lata) | — | ⛔ nieobsługiwany |
 | art. 442¹ § 4 k.c. | małoletni | — | ⛔ nieobsługiwany |
 | art. 121 k.c. | zawieszenie biegu (siła wyższa itd.) | — | ⛔ nieobsługiwany |
-| art. 5 ustawy z 13.04.2018 (Dz.U. 2018 poz. 1104) | przepisy przejściowe 2018 (reżim wg wymagalności) | `_czy_stara_przedawnienie` | ⚠️ do weryfikacji |
+| art. 5 ustawy z 13.04.2018 (Dz.U. 2018 poz. 1104) | przepisy przejściowe: nowe przepisy dla roszczeń nieprzedawnionych na 09.07.2018 (ust. 1); dawne – tylko dla przedawnionych przed tą datą | `_czy_stara_przedawnienie` | ✅ zweryfikowany |
 
 ## Kodeks pracy
 
@@ -55,10 +55,11 @@ Legenda statusu:
 | art. 107 § 6 k.k. | przeszkody zatarcia (środki karne/kompensacyjne/przepadek) | — | ⛔ nieobsługiwany |
 
 ---
-
 ## Do dokończenia weryfikacji (⚠️)
 
-1. **art. 5 ustawy nowelizującej z 13.04.2018** – potwierdzić kryterium „roszczeń powstałych”.
+Wszystkie stosowane przepisy zostały zweryfikowane z tekstem urzędowym.
+Do rozważenia (poza zakresem): art. 5 ust. 2 i ust. 3 ustawy nowelizującej 2018
+(reguła „terminu korzystniejszego” oraz odrębny reżim dla konsumentów).
 
-> Uwaga: reguły oznaczone ⚠️ i część merytoryczna mają charakter orientacyjny i wymagają
-> końcowej weryfikacji przez prawnika przed wdrożeniem produkcyjnym.
+> Uwaga: część merytoryczna ma charakter orientacyjny i wymaga końcowej weryfikacji
+> przez prawnika przed wdrożeniem produkcyjnym.

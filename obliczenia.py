@@ -99,17 +99,18 @@ def _format_data(d: Optional[date]) -> str:
     return d.strftime("%d.%m.%Y")
 
 
-def _czy_stara_przedawnienie(data_odniesienia: date) -> bool:
+def _czy_stara_przedawnienie(data_wymagalnosci: date, lata_baza: int) -> bool:
     """
-    Sprawdza, czy stosuje się przepisy stare (przed nowelizacją z 13.04.2018,
-    obowiązującą od 09.07.2018).
+    Przepisy przejściowe nowelizacji z 13.04.2018 (Dz.U. 2018 poz. 1104, obowiązuje
+    od 09.07.2018).
 
-    Kryterium: data powstania / wymagalności roszczenia (początek biegu przedawnienia),
-    a nie data zawarcia umowy (art. 5 ustawy nowelizującej w zw. z art. 120 k.c.).
-    Roszczenie wymagalne przed 09.07.2018 -> przepisy stare (bez końca roku);
-    wymagalne od 09.07.2018 -> przepisy nowe (z końcem roku).
+    Zgodnie z art. 5 ust. 1 nowe przepisy (m.in. reguła końca roku z art. 118 § 1 k.c.)
+    stosuje się do roszczeń powstałych przed 09.07.2018, które w tym dniu NIE były
+    jeszcze przedawnione. Przepisy dawne stosuje się zatem tylko do roszczeń, które
+    przedawniły się przed 09.07.2018 (por. art. 5 ust. 3 – odrębnie dla konsumentów).
     """
-    return data_odniesienia < date(2018, 7, 9)
+    termin_stary = dodaj_lata(data_wymagalnosci, lata_baza)
+    return termin_stary is not None and termin_stary < date(2018, 7, 9)
 
 
 def _oblicz_termin_koncowy(start: date, lata: int, stosowac_koniec_roku: bool) -> date:
@@ -149,7 +150,7 @@ def analiza_cywilna(
     - art. 124 § 2 k.c.: przedawnienie nie biegnie na nowo do zakończenia postępowania
     - art. 124 § 1 k.c.: po zakończeniu (umorzeniu) egzekucji -> bieg od nowa
     - art. 125 § 1 k.c.: wyrok -> 6 lat od wyroku (10 lat, gdy orzeczenie przed 09.07.2018)
-    - przepisy przejściowe 2018: umowy przed 09.07.2018 = bez końca roku
+    - przepisy przejściowe 2018 (art. 5): nowe przepisy dla roszczeń nieprzedawnionych na 09.07.2018
     """
     wynik = WynikAnalizyCywilnej()
 
@@ -166,14 +167,14 @@ def analiza_cywilna(
     # Buduj oś czasu zdarzeń
     zdarzenia: list[ZdarzeniePrzedawnienia] = []
 
-    # Reżim przedawnienia (stary/nowy) na podstawie daty WYMAGALNOŚCI (powstania
-    # roszczenia / początku biegu), a nie daty zawarcia umowy (art. 5 ustawy
-    # nowelizującej z 13.04.2018 w zw. z art. 120 k.c.).
-    stary_rezim = _czy_stara_przedawnienie(data_wymagalnosci)
+    # Przepisy przejściowe 2018 (art. 5 ustawy z 13.04.2018): nowe przepisy (z regułą
+    # końca roku) stosuje się do roszczeń nieprzedawnionych na dzień 09.07.2018;
+    # przepisy dawne – tylko do roszczeń przedawnionych przed tą datą.
+    stary_rezim = _czy_stara_przedawnienie(data_wymagalnosci, lata_baza)
     wynik.zalozenia.append(f"Data zawarcia umowy: {_format_data(data_zawarcia_umowy)}")
     wynik.zalozenia.append(
         f"Data wymagalności (początek biegu): {_format_data(data_wymagalnosci)} – "
-        f"{'przepisy STARE (roszczenie wymagalne przed 09.07.2018, bez końca roku)' if stary_rezim else 'przepisy NOWE (roszczenie wymagalne od 09.07.2018, z końcem roku)'}"
+        f"{'przepisy STARE (roszczenie przedawnione przed 09.07.2018, bez końca roku)' if stary_rezim else 'przepisy NOWE (roszczenie nieprzedawnione na 09.07.2018, z końcem roku)'}"
     )
 
     # 1. Start biegu

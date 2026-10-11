@@ -110,11 +110,11 @@ def test_cywilna_regula_konca_roku_po_2018():
     assert any("nowe" in z.lower() or "koniec roku" in z.lower() for z in w.zalozenia)
 
 
-def test_cywilna_bez_reguly_konca_roku_przed_2018():
-    """Umowa zawarta przed 2018-07-09 -> bez końca roku."""
+def test_cywilna_roszczenie_przedawnione_przed_2018_bez_konca_roku():
+    """Roszczenie przedawnione przed 09.07.2018 -> przepisy stare (bez końca roku)."""
     wynik = analiza_cywilna(
-        data_zawarcia_umowy=date(2018, 1, 1),
-        data_wymagalnosci=date(2018, 1, 1),
+        data_zawarcia_umowy=date(2015, 1, 1),
+        data_wymagalnosci=date(2015, 1, 1),
         wpłaty=[],
         data_wyroku_cywilnego=None,
         data_wszcz_egzekucji=None,
@@ -124,9 +124,28 @@ def test_cywilna_bez_reguly_konca_roku_przed_2018():
         data_oceny=date(2025, 1, 1)
     )
     w = wynik.wyniki[0]
-    # 3 lata od 2018-01-01 = 2021-01-01 (bez końca roku)
-    assert w.termin == date(2021, 1, 1)
+    # stary termin: 3 lata od 2015-01-01 = 2018-01-01 (< 09.07.2018) -> bez końca roku
+    assert w.termin == date(2018, 1, 1)
     assert any("stare" in z.lower() or "bez końca roku" in z.lower() for z in w.zalozenia)
+
+
+def test_cywilna_roszczenie_nieprzedawnione_na_2018_koniec_roku():
+    """Roszczenie nieprzedawnione na 09.07.2018 -> przepisy nowe (koniec roku)."""
+    wynik = analiza_cywilna(
+        data_zawarcia_umowy=date(2015, 1, 1),
+        data_wymagalnosci=date(2015, 8, 1),
+        wpłaty=[],
+        data_wyroku_cywilnego=None,
+        data_wszcz_egzekucji=None,
+        data_umor_egzekucji=None,
+        lata_baza=3,
+        podstawa_prawna="Art. 118 k.c.",
+        data_oceny=date(2025, 1, 1)
+    )
+    w = wynik.wyniki[0]
+    # 3 lata od 2015-08-01 = 2018-08-01 (>= 09.07.2018, nieprzedawnione) -> koniec roku 2018
+    assert w.termin == date(2018, 12, 31)
+    assert any("NOWE" in z for z in w.zalozenia)
 
 
 def test_cywilna_rezim_wedlug_wymagalnosci():
