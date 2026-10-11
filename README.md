@@ -37,7 +37,7 @@ Interfejs prowadzi przez dwa pytania:
 Pola pokazują się tylko dla wybranych etapów, a wynik to **karta decyzyjna**
 („nieprzedawnione do X – możesz działać" / „przedawnione – nic nie zrobisz").
 
-- **Roszczenie z umowy pożyczki / karty** – art. 118 k.c. (3 lata + koniec roku),
+- **Roszczenie z umowy pożyczki / karty** – art. 118 k.c. w zw. z art. 720 k.c. (3 lata + koniec roku),
   wpłaty (art. 123), egzekucja (art. 123 § 1 pkt 1, art. 124).
 - **Tytuł wykonawczy cywilny** – art. 125 § 1 k.c. (6 lat; 10 lat przed 09.07.2018),
   start od daty klauzuli wykonalności lub orzeczenia.
@@ -55,7 +55,7 @@ Pola pokazują się tylko dla wybranych etapów, a wynik to **karta decyzyjna**
 ### Część cywilna – roszczenia umowne
 | Zagadnienie | Podstawa | Zastosowana reguła |
 |---|---|---|
-| Termin ogólny (działalność gospodarcza) | art. 118 k.c. | 3 lata od wymagalności |
+| Roszczenie z umowy pożyczki / karty | art. 118 k.c. w zw. z art. 720 k.c. | 3 lata od wymagalności |
 | Przepisy przejściowe 2018 | art. 5 ustawy z 13.04.2018 | nowe przepisy dla roszczeń nieprzedawnionych na 09.07.2018; dawne – tylko dla przedawnionych wcześniej |
 | Uznanie długu / wpłata | art. 123 k.c. | nowy bieg od daty uznania |
 | Wszczęcie egzekucji | art. 124 k.c. | zawieszenie biegu |

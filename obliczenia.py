@@ -16,7 +16,7 @@ class TypZdarzenia(Enum):
 
 class TypOdpowiedzialnosci(Enum):
     """Reżim odpowiedzialności wpływający na podstawę przedawnienia."""
-    UMOWNA = "umowna"          # art. 118 k.c. (działalność gospodarcza)
+    UMOWNA = "umowna"          # art. 118 k.c. (roszczenie z działalności gospodarczej)
     DELIKTOWA = "deliktowa"    # art. 442¹ k.c. (osoba trzecia)
     PRACOWNICZA = "pracownicza"  # art. 291 k.p. (pracownik)
 
@@ -25,7 +25,7 @@ class TypOdpowiedzialnosci(Enum):
 # Podstawy prawne (jedno źródło prawdy dla logiki i interfejsu)
 # ─────────────────────────────────────────────
 LATA_UMOWNE = 3
-PODSTAWA_UMOWNA = "Art. 118 k.c. (działalność gospodarcza)"
+PODSTAWA_UMOWNA = "Art. 118 k.c. w zw. z art. 720 k.c. (umowa pożyczki)"
 PODSTAWA_PRACOWNICZA = "Art. 291 § 2 k.p. (odpowiedzialność pracownicza)"
 PODSTAWA_PRACOWNICZA_UMYSLNA = "Art. 291 § 3 k.p. w zw. z art. 442¹ § 1 k.c. (szkoda umyślna pracownika)"
 PODSTAWA_DELIKTOWA = "Art. 442¹ § 1 k.c. (szkoda deliktowa)"
@@ -145,7 +145,7 @@ def analiza_cywilna(
     Delikty/szkody obsługuje wyłącznie analiza_deliktowa.
 
     Zasady:
-    - art. 118 k.c.: 3 lata od wymagalności (działalność gospodarcza)
+    - art. 118 k.c.: 3 lata od wymagalności (roszczenie z umowy pożyczki / działalności gospodarczej)
     - art. 123 k.c.: uznanie długu (wpłata) -> bieg od nowa od daty uznania
     - art. 123 § 1 pkt 1 k.c.: wszczęcie egzekucji -> przerwanie biegu
     - art. 124 § 2 k.c.: przedawnienie nie biegnie na nowo do zakończenia postępowania

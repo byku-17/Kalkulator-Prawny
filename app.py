@@ -134,6 +134,10 @@ typ_sprawy = st.radio(
 
 jest_klient = typ_sprawy.startswith("Klient")
 jest_pracownik = "pracownik" in typ_sprawy
+podstawa_umowna = (
+    PODSTAWA_UMOWNA if "pożyczki" in typ_sprawy
+    else "Art. 118 k.c. w zw. z umową karty kredytowej"
+)
 
 # ─────────────────────────────────────────────
 # KROK 2 — CO SIĘ JUŻ STAŁO
@@ -336,7 +340,7 @@ if st.button("Sprawdź sprawę", type="primary"):
             wynik_cywilny = analiza_cywilna(
                 data_zawarcia_umowy, data_wymagalnosci, wpłaty,
                 data_wyroku_cywilnego, data_wszcz_egzekucji, data_umor_egzekucji,
-                LATA_UMOWNE, PODSTAWA_UMOWNA, data_oceny, data_klauzuli,
+                LATA_UMOWNE, podstawa_umowna, data_oceny, data_klauzuli,
             )
     else:
         if data_zdarzenia is not None:
