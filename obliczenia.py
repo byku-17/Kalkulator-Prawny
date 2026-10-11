@@ -30,7 +30,6 @@ PODSTAWA_PRACOWNICZA = "Art. 291 § 2 k.p. (odpowiedzialność pracownicza)"
 PODSTAWA_PRACOWNICZA_UMYSLNA = "Art. 291 § 3 k.p. w zw. z art. 442¹ § 1 k.c. (szkoda umyślna pracownika)"
 PODSTAWA_DELIKTOWA = "Art. 442¹ § 1 k.c. (szkoda deliktowa)"
 PODSTAWA_PRZESTEPSTWO = "Art. 442¹ § 2 k.c. (szkoda z przestępstwa – 20 lat od czynu)"
-PODSTAWA_SZKODA_OSOBA = "Art. 442¹ § 3 k.c. (szkoda na osobie)"
 PODSTAWA_WYROK = "Art. 125 § 1 k.c. (wyrok)"
 
 
@@ -367,7 +366,6 @@ def _oblicz_termin_deliktowy(
     data_dowiedzenia: date,
     czy_przestepstwo: bool,
     czy_umyslne: bool,
-    czy_szkoda_na_osobie: bool,
     typ_odpowiedzialnosci: TypOdpowiedzialnosci
 ) -> tuple[date, str, list[str], list[str], tuple[int, Optional[int], str]]:
     """
@@ -434,20 +432,6 @@ def _oblicz_termin_deliktowy(
                 )
         return termin, podstawa, zalozenia, ostrzezenia, parametry_resetu
 
-    if czy_szkoda_na_osobie:
-        # Art. 442¹ § 3 k.c.: szkoda na osobie – przedawnienie nie może skończyć się
-        # wcześniej niż z upływem 3 lat od dowiedzenia się (znosi limit 10 lat z § 1).
-        termin = dodaj_lata(data_dowiedzenia, 3)
-        podstawa = PODSTAWA_SZKODA_OSOBA
-        parametry_resetu = (3, None, "art. 442¹ § 3 k.c.")
-        zalozenia.append(
-            "Szkoda na osobie: przedawnienie nie może skończyć się wcześniej niż z upływem "
-            "3 lat od dnia, w którym poszkodowany dowiedział się o szkodzie i o osobie "
-            "obowiązanej do jej naprawienia – 10-letni limit z art. 442¹ § 1 k.c. nie ma "
-            "zastosowania (art. 442¹ § 3 k.c.)."
-        )
-        return termin, podstawa, zalozenia, ostrzezenia, parametry_resetu
-
     # Art. 442¹ § 1 k.c.: 3 lata od dowiedzenia się, max 10 lat od zdarzenia
     termin_3_lata = dodaj_lata(data_dowiedzenia, 3)
     termin_10_lat = dodaj_lata(data_zdarzenia, 10)
@@ -487,7 +471,6 @@ def analiza_deliktowa(
     data_wszcz_egzekucji: Optional[date],
     data_umor_egzekucji: Optional[date],
     data_oceny: date,
-    czy_szkoda_na_osobie: bool = False,
     data_klauzuli: Optional[date] = None
 ) -> WynikAnalizyCywilnej:
     """
@@ -497,7 +480,6 @@ def analiza_deliktowa(
     - art. 442¹ § 1 k.c.: 3 lata od dowiedzenia się o szkodzie i sprawcy,
       nie dłużej niż 10 lat od zdarzenia (szkoda bez kwalifikacji karnej)
     - art. 442¹ § 2 k.c.: 20 lat od popełnienia przestępstwa (szkoda z przestępstwa)
-    - art. 442¹ § 3 k.c.: szkoda na osobie – min. 3 lata od dowiedzenia (znosi limit 10 lat)
     - art. 291 § 2 k.p.: 1 rok od powzięcia wiadomości o szkodzie, nie później niż
       3 lata od jej wyrządzenia (odpowiedzialność pracownicza – nieumyślna)
     - art. 291 § 3 k.p.: szkoda umyślna pracownika – stosuje się przepisy k.c.
@@ -543,7 +525,7 @@ def analiza_deliktowa(
     # Oblicz termin bazowy dla szkody
     termin_bazowy, podstawa, zal_delikt, ostrz_delikt, reset_params = _oblicz_termin_deliktowy(
         data_zdarzenia, data_dowiedzenia_o_szkodzie, czy_przestepstwo, czy_umyslne,
-        czy_szkoda_na_osobie, typ_odpowiedzialnosci
+        typ_odpowiedzialnosci
     )
     wynik.zalozenia.extend(zal_delikt)
 

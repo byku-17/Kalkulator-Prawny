@@ -1,8 +1,10 @@
 # Kalkulator-Prawny
 
-Narzędzie do orientacyjnej analizy przedawnienia roszczeń cywilnych, przedawnienia
-karalności oraz zatarcia skazania. Aplikacja webowa oparta na Streamlit, z logiką
-obliczeniową oddzieloną od interfejsu i pokrytą testami jednostkowymi.
+Narzędzie do **szybkiej oceny, czy roszczenie / tytuł wykonawczy jest przedawniony
+i czy wierzyciel może jeszcze działać**. Obejmuje: roszczenia z umów pożyczki i kart
+kredytowych, tytuły wykonawcze cywilne (art. 125 k.c.) i karne (art. 103 k.k.),
+deficyty (pracownik / osoba trzecia), karalność czynów oraz zatarcie skazania.
+Aplikacja webowa (Streamlit), logika oddzielona od interfejsu i pokryta testami.
 
 > ⚠️ **Zastrzeżenie prawne:** Narzędzie ma charakter wyłącznie pomocniczy i
 > informacyjny. Wyniki **nie stanowią wiążącej porady prawnej** i nie mogą być
@@ -27,16 +29,24 @@ obliczeniową oddzieloną od interfejsu i pokrytą testami jednostkowymi.
 
 ## Funkcjonalności
 
-- **Roszczenia umowne** (cywilne) – osobna data zawarcia umowy i wymagalności,
-  uznanie długu, wyrok, egzekucja, umorzenie egzekucji.
-- **Szkody i odpowiedzialność pracownicza** (deliktowa) – osobna data zdarzenia i
-  dowiedzenia się o szkodzie oraz sprawcy, kwalifikacja przestępstwa, umyślność.
-- **Przedawnienie karalności** – ustawowy termin (art. 101 § 1 k.k.), oskarżenie
-  prywatne (art. 101 § 2 k.k.) oraz przedłużenie o 10 lat.
-- **Zatarcie skazania** – automatyczne oraz w drodze wyjątku na wniosek.
-- **Walidacja danych** – blokada obliczeń przy sprzecznych danych i jasne
-  komunikaty o brakach.
-- **Ochrona hasłem** dostępu do aplikacji (sekret Streamlit).
+Interfejs prowadzi przez dwa pytania:
+1. **Typ sprawy** – klient (pożyczka / karta kredytowa) lub deficyt (pracownik / osoba trzecia).
+2. **Co już się stało** – brak postępowania, wyrok/nakaz cywilny, egzekucja,
+   postępowanie karne, zatarcie skazania.
+
+Pola pokazują się tylko dla wybranych etapów, a wynik to **karta decyzyjna**
+(„nieprzedawnione do X – możesz działać" / „przedawnione – nic nie zrobisz").
+
+- **Roszczenie z umowy pożyczki / karty** – art. 118 k.c. (3 lata + koniec roku),
+  wpłaty (art. 123), egzekucja (art. 123 § 1 pkt 1, art. 124).
+- **Tytuł wykonawczy cywilny** – art. 125 § 1 k.c. (6 lat; 10 lat przed 09.07.2018),
+  start od daty klauzuli wykonalności lub orzeczenia.
+- **Tytuł wykonawczy karny** – art. 103 § 1 k.k. (30/15/10 lat od uprawomocnienia).
+- **Deficyty** – art. 291 k.p. (pracownik) lub art. 442¹ § 1/§ 2 k.c. (osoba trzecia).
+- **Karalność (sprawy wielowątkowe)** – wiele kwalifikacji naraz, karalność per czyn
+  (art. 101/102 k.k.).
+- **Zatarcie skazania** – art. 107 k.k.
+- **Walidacja danych** i **ochrona hasłem** dostępu.
 
 ---
 
@@ -56,7 +66,6 @@ obliczeniową oddzieloną od interfejsu i pokrytą testami jednostkowymi.
 | Zagadnienie | Podstawa | Zastosowana reguła |
 |---|---|---|
 | Szkoda bez kwalifikacji karnej | art. 442¹ § 1 k.c. | 3 lata od dowiedzenia się, max 10 lat od zdarzenia |
-| Szkoda na osobie | art. 442¹ § 3 k.c. | min. 3 lata od dowiedzenia się (znosi limit 10 lat) |
 | Szkoda z przestępstwa | art. 442¹ § 2 k.c. | 20 lat od popełnienia czynu; podlega przerwaniu (art. 123 k.c.) |
 | Odpowiedzialność pracownicza (nieumyślna) | art. 291 § 2 k.p. | 1 rok od powzięcia wiadomości, max 3 lata od wyrządzenia |
 | Odpowiedzialność pracownicza (umyślna) | art. 291 § 3 k.p. | przepisy k.c. (art. 442¹ § 1 k.c.: 3 lata, max 10 lat) |
@@ -81,7 +90,7 @@ Aplikacja **jawnie zgłasza** przypadki, których nie obsługuje, zamiast podawa
 niepewne terminy jako pewne:
 
 - Przepisy szczególne przewidujące odrębne terminy przedawnienia.
-- art. 442¹ § 4 k.c. (szkoda na osobie małoletniego – nie wcześniej niż 2 lata od pełnoletności).
+- art. 442¹ § 3 i § 4 k.c. (szkoda na osobie; małoletni) — poza zakresem aplikacji.
 - Przedłużenie karalności, gdy nie podano daty wszczęcia postępowania przeciwko osobie.
 - Karalność przy oskarżeniu prywatnym bez daty dowiedzenia się o osobie sprawcy
   (status „dane niewystarczające”).
@@ -167,7 +176,7 @@ Zakres testów:
 | Plik | Zakres | Liczba |
 |---|---|---|
 | `tests/test_obliczenia.py` | logika umowna, karna, zatarcie | 44 |
-| `tests/test_deliktowa.py` | szkody / odpowiedzialność pracownicza | 23 |
+| `tests/test_deliktowa.py` | szkody / odpowiedzialność pracownicza | 22 |
 | `tests/test_validacja.py` | walidacja danych wejściowych | 21 |
 | `tests/test_podstawy.py` | spójność podstaw prawnych (stałe) | 5 |
 | `tests/test_app_smoke.py` | dymny test interfejsu (AppTest) | 4 |
@@ -228,14 +237,30 @@ Architektura rozdziela trzy warstwy:
 | 8a | Uproszczenie `_oblicz_termin_koncowy` (usunięcie martwego fallbacku) | `e47897d` |
 | 8b | Walidacja: umorzenie egzekucji nie przed datą zdarzenia deliktowego | `9a3c665` |
 | 8c | Dokumentacja: licznik testów i notka bezpieczeństwa meta tagów | `3ef03a3` |
-| A | Lint (Ruff), usunięcie martwego kodu i nieużywanych importów | `—` |
-| B | Spójność podstaw prawnych: wspólne stałe dla logiki i interfejsu | `—` |
-| C | Obsługa oskarżenia prywatnego (art. 101 § 2 k.k.) | `—` |
-| D | Limit 20 lat od czynu po resecie biegu (art. 442¹ § 2 k.c.) – cofnięty | `—` |
-| E | Dopełnienie walidacji deliktów i daty oskarżenia prywatnego | `—` |
-| F | Dokumentacja: uzupełnienie historii zmian i opisu funkcji | `—` |
+| A | Lint (Ruff), usunięcie martwego kodu i nieużywanych importów | `b15f312` |
+| B | Spójność podstaw prawnych: wspólne stałe dla logiki i interfejsu | `b15f312` |
+| C | Obsługa oskarżenia prywatnego (art. 101 § 2 k.k.) | `b15f312` |
+| D | Limit 20 lat po resecie biegu (art. 442¹ § 2 k.c.) – cofnięty w Fix 11 | `b15f312` |
+| E | Dopełnienie walidacji deliktów i daty oskarżenia prywatnego | `b15f312` |
+| F | Dokumentacja: uzupełnienie historii zmian i opisu funkcji | `b15f312` |
+| 10 | Pracownik: art. 291 § 2 k.p. (1 rok / 3 lata) + § 3 (umyślne → k.c.) | `76fbb95` |
+| 11 | art. 442¹ § 2 k.c. nie jest limitem nieprzerywalnym | `864dc1f` |
+| 12 | Reżim przejściowy 2018 wg wymagalności (skorygowany w 19) | `1a7eeda` |
+| 13 | Zatarcie: aktualne okresy art. 107 k.k. | `e015f51` |
+| 14 | Egzekucja: art. 123 § 1 pkt 1 + art. 124 § 1/§ 2 k.c. | `9747ff7` |
+| 15 | Ostrzeżenie: sporna reguła końca roku vs art. 442¹ | `90767e9` |
+| 16 | art. 125 § 1 k.c. – 10 lat dla orzeczeń przed 09.07.2018 | `9e97717` |
+| 17 | Rejestr przepisów (`docs/przepisy.md`) | `0ff04ef` |
+| 18 | art. 102 § 1 k.k. – +5 lat dla oskarżenia prywatnego | `162ecd6` |
+| 19 | Przepisy przejściowe 2018 wg art. 5 ustawy nowelizującej | `c5b30fb` |
+| 20 | art. 442¹ § 3 k.c. (szkoda na osobie) – cofnięty w 25 | `3ca2d1b` |
+| 21 | Redesign UI: 2 kroki + karta decyzyjna | `5247c0e` |
+| 22 | art. 103 k.k. – przedawnienie wykonania kary | `0ea7062` |
+| 23 | Multi-select kwalifikacji czynów (sprawy wielowątkowe) | `8dcc1af` |
+| 24 | Data klauzuli wykonalności jako start art. 125 k.c. | `20b75be` |
+| 25 | Porządki: usunięcie art. 442¹ § 3 (poza zakresem) + README | `—` |
 
-> Fazy 7–8c są zacommitowane. Fazy A–F to bieżący przegląd kodu (stan: niecommitowany).
+> Rejestr zweryfikowanych przepisów: [`docs/przepisy.md`](docs/przepisy.md).
 
 ---
 
