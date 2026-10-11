@@ -34,7 +34,7 @@ class WynikObliczenia:
     """Pojedynczy wynik obliczenia przedawnienia/zatarcia."""
     nazwa: str
     termin: date
-    status: str  # "OK" | "PRZEDAWNIONE" | "TRWA" | "WYGASŁE" | "BRAK_DANYCH" | "W_TOKU"
+    status: str  # "OK" | "PRZEDAWNIONE" | "W_TOKU" | "TRWA" | "WYGASŁE" | "BRAK_DANYCH" | "ZATARTE" | "W_KRK" | "MOZLIWE_WCZEŚNIEJ"
     podstawa_prawna: str
     zalozenia: list[str] = field(default_factory=list)
     ostrzezenia: list[str] = field(default_factory=list)
