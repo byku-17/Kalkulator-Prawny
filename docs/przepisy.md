@@ -54,6 +54,22 @@ Legenda statusu:
 | art. 107 § 5 k.k. | odstąpienie od wymierzenia kary: 1 rok | — | ⛔ nieobsługiwany |
 | art. 107 § 6 k.k. | przeszkody zatarcia (środki karne/kompensacyjne/przepadek) | — | ⛔ nieobsługiwany |
 
+### Mapa kwalifikacji czynów → karalność (art. 101 § 1 k.k.) — zweryfikowana (Dz.U.2025.383)
+
+| Kwalifikacja | Zagrożenie (kpw) | Karalność |
+|---|---|---|
+| art. 286 § 1 k.k. (oszustwo) | do 8 lat | 15 |
+| art. 297 § 1 k.k. (wyłudzenie kredytu) | 3 mies.–5 lat | 10 |
+| art. 270 § 1 k.k. (fałszerstwo dokumentu) | 3 mies.–5 lat | 10 |
+| art. 271 § 1 k.k. (poświadczenie nieprawdy) | 3 mies.–5 lat | 10 |
+| art. 271 § 3 k.k. (poświadczenie dla korzyści) | do 8 lat | 15 |
+| art. 284 § 1 k.k. (przywłaszczenie) | do 3 lat | 5 |
+| art. 284 § 2 k.k. (przywłaszczenie powierzonego mienia) | 3 mies.–5 lat | 10 |
+| art. 278 § 1 k.k. (kradzież) | 3 mies.–5 lat | 10 |
+| art. 279 § 1 k.k. (kradzież z włamaniem) | 1–10 lat | 15 |
+| art. 287 § 1 k.k. (oszustwo komputerowe / BLIK) | 3 mies.–5 lat | 10 |
+| zbrodnia (art. 101 § 1 pkt 2 k.k.) | — | 20 |
+
 ---
 ## Do dokończenia weryfikacji (⚠️)
 

@@ -87,10 +87,17 @@ st.warning(
 MIN_DATE = date(2000, 1, 1)
 
 OPCJE_KK = {
-    "Oszustwo ogólne z art. 286 (występek > 5 lat, przedawnienie: 15 lat)": 15,
-    "Oszustwo kredytowe, fałszerstwo, przywłaszczenie powierzone (występek 3-5 lat, przedawnienie: 10 lat)": 10,
-    "Zwykłe przywłaszczenie (występek do 3 lat, przedawnienie: 5 lat)": 5,
-    "Zbrodnia np. podrabianie środków płatniczych (przedawnienie: 20 lat)": 20,
+    "Oszustwo (art. 286 § 1 k.k.) – zagrożenie do 8 lat": 15,
+    "Wyłudzenie kredytu (art. 297 § 1 k.k.) – 3 mies.–5 lat": 10,
+    "Fałszerstwo dokumentu (art. 270 § 1 k.k.) – 3 mies.–5 lat": 10,
+    "Poświadczenie nieprawdy (art. 271 § 1 k.k.) – 3 mies.–5 lat": 10,
+    "Poświadczenie nieprawdy dla korzyści (art. 271 § 3 k.k.) – do 8 lat": 15,
+    "Przywłaszczenie (art. 284 § 1 k.k.) – do 3 lat": 5,
+    "Przywłaszczenie powierzonego mienia (art. 284 § 2 k.k.) – 3 mies.–5 lat": 10,
+    "Kradzież (art. 278 § 1 k.k.) – 3 mies.–5 lat": 10,
+    "Kradzież z włamaniem (art. 279 § 1 k.k.) – 1–10 lat": 15,
+    "Oszustwo komputerowe / BLIK (art. 287 § 1 k.k.) – 3 mies.–5 lat": 10,
+    "Zbrodnia (art. 101 § 1 pkt 2 k.k.)": 20,
 }
 
 OPCJE_ZATARCIA = {
@@ -156,7 +163,7 @@ data_wyroku_cywilnego = None
 data_wszcz_egzekucji = None
 data_umor_egzekucji = None
 data_czynu = None
-wybor_kk = None
+kwalifikacje: list[str] = []
 wszczecie_k = None
 umorzenie_k = None
 wyrok_k = None
@@ -205,7 +212,10 @@ if etap_egzekucja:
 if etap_karny:
     st.subheader("Postępowanie karne")
     data_czynu = st.date_input("Data popełnienia czynu", value=None, min_value=MIN_DATE)
-    wybor_kk = st.selectbox("Kwalifikacja czynu", list(OPCJE_KK.keys()))
+    kwalifikacje = st.multiselect(
+        "Kwalifikacje czynów (można wybrać kilka – sprawy wielowątkowe)",
+        list(OPCJE_KK.keys()),
+    )
     wszczecie_k = st.date_input("Data wszczęcia postępowania karnego", value=None, min_value=MIN_DATE)
     umorzenie_k = st.date_input("Data umorzenia postępowania karnego", value=None, min_value=MIN_DATE)
 
@@ -332,13 +342,18 @@ if st.button("Sprawdź sprawę", type="primary"):
         for o in wynik_cywilny.ostrzezenia:
             st.info(o)
 
-    # --- Karne: karalność ---
-    if etap_karny and data_czynu is not None and wybor_kk is not None:
-        wynik_karny = analiza_karna(
-            data_czynu, OPCJE_KK[wybor_kk], wszczecie_k, umorzenie_k, data_oceny,
-        )
+    # --- Karne: karalność (per czyn) ---
+    if etap_karny and data_czynu is not None and kwalifikacje:
         st.markdown("#### Karalność (możliwość ścigania)")
-        _karta_karna(wynik_karny)
+        wyniki_karne = []
+        for kwal in kwalifikacje:
+            wk = analiza_karna(data_czynu, OPCJE_KK[kwal], wszczecie_k, umorzenie_k, data_oceny)
+            wyniki_karne.append(wk)
+            st.markdown(f"**{kwal}**")
+            _karta_karna(wk)
+        terminy = [wk.wyniki[0].termin for wk in wyniki_karne if wk.wyniki]
+        if len(terminy) > 1:
+            st.info(f"➡️ Najdłuższy termin karalności: **{max(terminy).strftime('%d.%m.%Y')}**.")
 
     # --- Wykonanie kary (tytuł wykonawczy karny) ---
     if wyrok_k is not None and wybor_wykonania is not None:
