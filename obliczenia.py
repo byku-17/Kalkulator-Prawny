@@ -99,9 +99,7 @@ def _czy_stara_przedawnienie(data_zawarcia: date) -> bool:
 
 def _oblicz_termin_koncowy(start: date, lata: int, stosowac_koniec_roku: bool) -> date:
     """Oblicza termin końcowy przedawnienia z opcjonalną regułą końca roku."""
-    termin = dodaj_lata(start, lata)
-    if termin is None:
-        return start  # fallback
+    termin = start + relativedelta(years=lata)
     if stosowac_koniec_roku:
         return date(termin.year, 12, 31)
     return termin
