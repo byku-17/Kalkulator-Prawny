@@ -83,6 +83,11 @@ niepewne terminy jako pewne:
 Reguły dot. odpowiedzialności pracowniczej oraz części karnej mają charakter
 orientacyjny i **wymagają przeglądu prawnego**.
 
+> Uwaga bezpieczeństwa: meta tagi w `app.py` to wyłącznie best-effort —
+> Streamlit nie ustawia nagłówków HTTP z poziomu aplikacji. Prawdziwe
+> `CSP / X-Frame-Options` muszą pochodzić z reverse proxy; devcontainer
+> używa domyślnych (włączonych) `CORS/XSRF`.
+
 ---
 
 ## Wymagania
@@ -150,10 +155,10 @@ Zakres testów:
 | Plik | Zakres | Liczba |
 |---|---|---|
 | `tests/test_obliczenia.py` | logika umowna, karna, zatarcie | 33 |
-| `tests/test_deliktowa.py` | szkody / odpowiedzialność pracownicza | 17 |
-| `tests/test_validacja.py` | walidacja danych wejściowych | 18 |
+| `tests/test_deliktowa.py` | szkody / odpowiedzialność pracownicza | 18 |
+| `tests/test_validacja.py` | walidacja danych wejściowych | 19 |
 | `tests/test_app_smoke.py` | dymny test interfejsu (AppTest) | 4 |
-| **Razem** | | **72** |
+| **Razem** | | **74** |
 
 ---
 
