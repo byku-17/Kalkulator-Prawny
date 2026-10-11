@@ -21,6 +21,17 @@ class TypOdpowiedzialnosci(Enum):
     PRACOWNICZA = "pracownicza"  # art. 291 k.p. (pracownik)
 
 
+# ─────────────────────────────────────────────
+# Podstawy prawne (jedno źródło prawdy dla logiki i interfejsu)
+# ─────────────────────────────────────────────
+LATA_UMOWNE = 3
+PODSTAWA_UMOWNA = "Art. 118 k.c. (działalność gospodarcza)"
+PODSTAWA_PRACOWNICZA = "Art. 291 § 1 k.p. w zw. z art. 442¹ § 1 k.c. (odpowiedzialność pracownicza)"
+PODSTAWA_DELIKTOWA = "Art. 442¹ § 1 k.c. (szkoda deliktowa)"
+PODSTAWA_PRZESTEPSTWO = "Art. 442¹ § 2 k.c. (szkoda z przestępstwa – 20 lat od czynu)"
+PODSTAWA_WYROK = "Art. 125 § 1 k.c. (wyrok)"
+
+
 @dataclass
 class ZdarzeniePrzedawnienia:
     """Pojedyncze zdarzenie na osi czasu przedawnienia."""
@@ -155,7 +166,7 @@ def analiza_cywilna(
     zdarzenia.append(ZdarzeniePrzedawnienia(
         typ=TypZdarzenia.START,
         data=data_wymagalnosci,
-        opis=f"Początek biegu przedawnienia (wymagalność)"
+        opis="Początek biegu przedawnienia (wymagalność)"
     ))
 
     # 2. Wpłaty (tylko te po wymagalności)
@@ -164,7 +175,7 @@ def analiza_cywilna(
             zdarzenia.append(ZdarzeniePrzedawnienia(
                 typ=TypZdarzenia.WPLATA,
                 data=w,
-                opis=f"Wpłata / uznanie długu (art. 123 k.c.)"
+                opis="Wpłata / uznanie długu (art. 123 k.c.)"
             ))
 
     # 3. Wyrok (jeśli jest)
@@ -172,7 +183,7 @@ def analiza_cywilna(
         zdarzenia.append(ZdarzeniePrzedawnienia(
             typ=TypZdarzenia.WYROK,
             data=data_wyroku_cywilnego,
-            opis=f"Prawomocny wyrok / nakaz zapłaty"
+            opis="Prawomocny wyrok / nakaz zapłaty"
         ))
 
     # 4. Egzekucja
@@ -180,7 +191,7 @@ def analiza_cywilna(
         zdarzenia.append(ZdarzeniePrzedawnienia(
             typ=TypZdarzenia.WYSZCZ_EGZEKUCJI,
             data=data_wszcz_egzekucji,
-            opis=f"Wszczęcie egzekucji komorniczej"
+            opis="Wszczęcie egzekucji komorniczej"
         ))
 
     # 5. Umorzenie egzekucji
@@ -188,7 +199,7 @@ def analiza_cywilna(
         zdarzenia.append(ZdarzeniePrzedawnienia(
             typ=TypZdarzenia.UMORZENIE_EGZEKUCJI,
             data=data_umor_egzekucji,
-            opis=f"Prawomocne umorzenie egzekucji"
+            opis="Prawomocne umorzenie egzekucji"
         ))
 
     # Sortuj chronologicznie
@@ -235,7 +246,7 @@ def analiza_cywilna(
             wyrok_uzyskany = True
             aktualny_start = zdarzenie.data
             aktualne_lata = 6
-            aktualna_podstawa = "Art. 125 § 1 k.c. (wyrok)"
+            aktualna_podstawa = PODSTAWA_WYROK
             # Egzekucja kończy się wyrokiem (jeśli była)
             egzekucja_w_toku = False
             wynik.zalozenia.append(
@@ -347,7 +358,7 @@ def _oblicz_termin_deliktowy(
     if czy_przestepstwo:
         # Art. 442¹ § 2 k.c.: 20 lat od popełnienia przestępstwa
         termin = dodaj_lata(data_zdarzenia, 20)
-        podstawa = "Art. 442¹ § 2 k.c. (szkoda z przestępstwa – 20 lat od czynu)"
+        podstawa = PODSTAWA_PRZESTEPSTWO
         zalozenia.append(
             "Szkoda wynikła ze zbrodni lub występku: 20 lat od dnia popełnienia "
             "przestępstwa, bez względu na moment dowiedzenia się o szkodzie "
@@ -364,14 +375,14 @@ def _oblicz_termin_deliktowy(
         termin_10_lat = dodaj_lata(data_zdarzenia, 10)
 
         if typ_odpowiedzialnosci == TypOdpowiedzialnosci.PRACOWNICZA:
-            podstawa = "Art. 291 § 1 k.p. w zw. z art. 442¹ § 1 k.c. (odpowiedzialność pracownicza)"
+            podstawa = PODSTAWA_PRACOWNICZA
             zalozenia.append(
                 "Odpowiedzialność pracownicza za szkodę: 3 lata od dnia, w którym "
                 "pracodawca dowiedział się o szkodzie i o osobie obowiązanej do jej "
                 "naprawienia (art. 291 § 1 k.p.)."
             )
         else:
-            podstawa = "Art. 442¹ § 1 k.c. (szkoda deliktowa)"
+            podstawa = PODSTAWA_DELIKTOWA
             zalozenia.append(
                 "Czyn niedozwolony bez kwalifikacji karnej: 3 lata od dnia dowiedzenia się "
                 "o szkodzie i o osobie obowiązanej do jej naprawienia (art. 442¹ § 1 k.c.)."
@@ -546,7 +557,7 @@ def analiza_deliktowa(
         elif zdarzenie.typ == TypZdarzenia.WYROK:
             wyrok_uzyskany = True
             aktualny_start = zdarzenie.data
-            aktualna_podstawa = "Art. 125 § 1 k.c. (wyrok)"
+            aktualna_podstawa = PODSTAWA_WYROK
             egzekucja_w_toku = False
             wynik.zalozenia.append(
                 f"Wyrok {_format_data(zdarzenie.data)}: reżim 6 lat od wyroku (art. 125 § 1 k.c.)."
@@ -602,23 +613,23 @@ def analiza_deliktowa(
     if wyrok_uzyskany:
         termin_ostateczny = dodaj_lata(aktualny_start, 6)
     else:
-        # Jeśli wpłaty/umorzenie przesunęły start, przelicz termin deliktowy od nowego startu.
-        # Dla szkody bez kwalifikacji karnej zachowujemy bezwzględną granicę
-        # 10 lat od zdarzenia (art. 442¹ § 1 k.c.) — reset nie może jej wydłużyć.
+        # Jeśli wpłaty/umorzenie przesunęły start, przelicz termin od nowego startu.
+        # Reset nie może jednak wydłużyć bezwzględnej granicy liczonej od zdarzenia:
+        # 10 lat dla art. 442¹ § 1 k.c., 20 lat dla art. 442¹ § 2 k.c.
         if aktualny_start != zdarzenia[0].data:
-            # Po uznaniu/umorzeniu biegnie standardowy termin właściwy dla reżimu
             if czy_przestepstwo:
-                termin_ostateczny = dodaj_lata(aktualny_start, 20)
+                lata_resetu, lata_cap, podstawa_cap = 20, 20, "art. 442¹ § 2 k.c."
             else:
-                termin_od_resetu = dodaj_lata(aktualny_start, 3)
-                termin_cap_10 = dodaj_lata(data_zdarzenia, 10)
-                termin_ostateczny = min(termin_od_resetu, termin_cap_10)
-                if termin_cap_10 < termin_od_resetu:
-                    wynik.zalozenia.append(
-                        f"Reset biegu ({_format_data(aktualny_start)}) ograniczony bezwzględną "
-                        f"granicą 10 lat od zdarzenia ({_format_data(termin_cap_10)}) "
-                        f"(art. 442¹ § 1 k.c.)."
-                    )
+                lata_resetu, lata_cap, podstawa_cap = 3, 10, "art. 442¹ § 1 k.c."
+            termin_od_resetu = dodaj_lata(aktualny_start, lata_resetu)
+            termin_cap = dodaj_lata(data_zdarzenia, lata_cap)
+            termin_ostateczny = min(termin_od_resetu, termin_cap)
+            if termin_cap < termin_od_resetu:
+                wynik.zalozenia.append(
+                    f"Reset biegu ({_format_data(aktualny_start)}) ograniczony bezwzględną "
+                    f"granicą {lata_cap} lat od zdarzenia ({_format_data(termin_cap)}) "
+                    f"({podstawa_cap})."
+                )
         else:
             termin_ostateczny = termin_bazowy
 
@@ -651,7 +662,8 @@ def analiza_karna(
     data_wszcz_k: Optional[date],
     data_umor_k: Optional[date],
     data_oceny: date,
-    czy_oskarzenie_prywatne: bool = False
+    czy_oskarzenie_prywatne: bool = False,
+    data_dowiedzenia_o_sprawcy: Optional[date] = None
 ) -> WynikAnalizyKarne:
     """
     Analiza przedawnienia karalności (art. 101, 102 k.k.).
@@ -659,12 +671,13 @@ def analiza_karna(
     Obsługiwane:
     - art. 101 § 1 k.k.: ustawowy termin przedawnienia karalności zależny od
       kwalifikacji czynu (przekazywany jako lata_karne)
+    - art. 101 § 2 k.k.: przestępstwa ścigane z oskarżenia prywatnego – 1 rok od
+      dowiedzenia się przez pokrzywdzonego o osobie sprawcy, nie później niż
+      3 lata od popełnienia czynu (wymaga data_dowiedzenia_o_sprawcy)
     - art. 102 k.k.: przedłużenie o 10 lat, jeżeli w okresie przedawnienia
       wszczęto postępowanie PRZECIWKO OSOBIE
 
     Nieobsługiwane (zgłaszane jawnie):
-    - art. 101 § 2 k.k. (przestępstwa ścigane z oskarżenia prywatnego – 1 rok
-      od dowiedzenia się o osobie sprawcy)
     - przepisy szczególne przewidujące inne terminy przedawnienia
     - wydłużenie karalności w trybie art. 102 wobec braku daty wszczęcia
       postępowania przeciwko osobie
@@ -679,23 +692,54 @@ def analiza_karna(
         wynik.bledy.append("Brak daty czynu – nie można obliczyć przedawnienia karalności.")
         return wynik
 
-    termin_pierwotny = dodaj_lata(data_czynu, lata_karne)
-    if termin_pierwotny is None:
-        wynik.bledy.append("Nie udało się obliczyć terminu karnego.")
-        return wynik
-
-    termin_karny = termin_pierwotny
-
     wynik.zalozenia.append(f"Data czynu: {_format_data(data_czynu)}")
-    wynik.zalozenia.append(f"Ustawowy termin przedawnienia karalności: {lata_karne} lat (art. 101 § 1 k.k.)")
-    wynik.zalozenia.append(f"Pierwotny termin: {_format_data(termin_pierwotny)}")
 
     if czy_oskarzenie_prywatne:
-        wynik.nieobslugiwane.append(
-            "Przestępstwo ścigane z oskarżenia prywatnego (art. 101 § 2 k.k.): "
-            "karalność ustaje z upływem 1 roku od dowiedzenia się przez pokrzywdzonego "
-            "o osobie sprawcy. Wymaga odrębnej daty – obecnie nieobsługiwane."
+        if data_dowiedzenia_o_sprawcy is None:
+            wynik.wyniki.append(WynikObliczenia(
+                nazwa="Karalność – dane niewystarczające (art. 101 § 2 k.k.)",
+                termin=data_oceny,
+                status="BRAK_DANYCH",
+                podstawa_prawna="Art. 101 § 2 k.k.",
+                zalozenia=wynik.zalozenia.copy(),
+                ostrzezenia=[
+                    "Przestępstwo ścigane z oskarżenia prywatnego: brak daty dowiedzenia się "
+                    "przez pokrzywdzonego o osobie sprawcy. Podaj tę datę, aby obliczyć 1-roczny "
+                    "termin (art. 101 § 2 k.k.)."
+                ],
+                orientacyjny=True
+            ))
+            return wynik
+
+        termin_1_rok = dodaj_lata(data_dowiedzenia_o_sprawcy, 1)
+        termin_3_lata = dodaj_lata(data_czynu, 3)
+        termin_pierwotny = min(termin_1_rok, termin_3_lata)
+        podstawa_prawna = "Art. 101 § 2, art. 102 k.k."
+        nazwa = "Orientacyjne ustanie karalności (art. 101 § 2 k.k.)"
+
+        wynik.zalozenia.append("Przestępstwo ścigane z oskarżenia prywatnego – termin z art. 101 § 2 k.k.")
+        wynik.zalozenia.append(f"Data dowiedzenia się o osobie sprawcy: {_format_data(data_dowiedzenia_o_sprawcy)}")
+        wynik.zalozenia.append(f"1 rok od dowiedzenia się o sprawcy: {_format_data(termin_1_rok)}")
+        wynik.zalozenia.append(f"Bezwzględny limit 3 lat od czynu: {_format_data(termin_3_lata)}")
+        if termin_3_lata < termin_1_rok:
+            wynik.zalozenia.append(
+                "Zastosowano bezwzględny limit 3 lat od popełnienia czynu (art. 101 § 2 k.k.) – "
+                "jest krótszy niż rok od dowiedzenia się o sprawcy."
+            )
+        wynik.zalozenia.append(f"Pierwotny termin: {_format_data(termin_pierwotny)}")
+    else:
+        termin_pierwotny = dodaj_lata(data_czynu, lata_karne)
+        if termin_pierwotny is None:
+            wynik.bledy.append("Nie udało się obliczyć terminu karnego.")
+            return wynik
+        podstawa_prawna = "Art. 101 § 1, art. 102 k.k."
+        nazwa = "Orientacyjne ustanie karalności (art. 101/102 k.k.)"
+        wynik.zalozenia.append(
+            f"Ustawowy termin przedawnienia karalności: {lata_karne} lat (art. 101 § 1 k.k.)"
         )
+        wynik.zalozenia.append(f"Pierwotny termin: {_format_data(termin_pierwotny)}")
+
+    termin_karny = termin_pierwotny
 
     # Art. 102 k.k.: przedłużenie karalności o 10 lat
     if data_wszcz_k:
@@ -743,10 +787,10 @@ def analiza_karna(
         )
 
     wynik.wyniki.append(WynikObliczenia(
-        nazwa="Orientacyjne ustanie karalności (art. 101/102 k.k.)",
+        nazwa=nazwa,
         termin=termin_karny,
         status=status,
-        podstawa_prawna="Art. 101 § 1, art. 102 k.k.",
+        podstawa_prawna=podstawa_prawna,
         zalozenia=wynik.zalozenia.copy(),
         ostrzezenia=[komunikacja] + wynik.ostrzezenia,
         orientacyjny=True

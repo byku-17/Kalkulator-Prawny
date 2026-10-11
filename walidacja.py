@@ -16,7 +16,8 @@ def waliduj_dane(
     umorzenie_k: Optional[date],
     wyrok_k: Optional[date],
     data_wykonania_kary: Optional[date],
-    czy_delikt: bool
+    czy_delikt: bool,
+    data_dowiedzenia_o_sprawcy: Optional[date] = None
 ) -> tuple[list[str], list[str]]:
     """
     Waliduje spójność danych wejściowych kalkulatora.
@@ -49,16 +50,18 @@ def waliduj_dane(
         if data_zdarzenia is not None and data_dowiedzenia is not None and data_dowiedzenia < data_zdarzenia:
             bledy.append("🔴 Data dowiedzenia się o szkodzie nie może być wcześniejsza niż data zdarzenia.")
 
+        # Punkt odniesienia: dowiedzenie się o szkodzie (albo zdarzenie, gdy brak daty dowiedzenia).
+        ref_delikt = data_dowiedzenia if data_dowiedzenia else data_zdarzenia
+
         for w in wpłaty:
-            ref = data_dowiedzenia if data_dowiedzenia else data_zdarzenia
-            if ref and w < ref:
+            if ref_delikt and w < ref_delikt:
                 bledy.append(
                     f"🔴 Wpłata {w.strftime('%d.%m.%Y')} nie może być wcześniejsza niż data zdarzenia / dowiedzenia się o szkodzie."
                 )
 
         for d, nazwa in [(data_wyroku_cywilnego, "Wyrok cywilny"), (data_wszcz_egzekucji, "Egzekucja"), (data_umor_egzekucji, "Umorzenie egzekucji")]:
-            if d and data_zdarzenia and d < data_zdarzenia:
-                bledy.append(f"🔴 {nazwa} nie może być wcześniejszy/a niż data zdarzenia wywołującego szkodę.")
+            if d and ref_delikt and d < ref_delikt:
+                bledy.append(f"🔴 {nazwa} nie może być wcześniejszy/a niż data zdarzenia / dowiedzenia się o szkodzie.")
 
     # --- Egzekucja / umorzenie (niezależnie od reżimu) ---
     if data_wszcz_egzekucji and data_umor_egzekucji and data_umor_egzekucji < data_wszcz_egzekucji:
@@ -82,6 +85,9 @@ def waliduj_dane(
 
     if wyrok_k is None and data_wykonania_kary is not None:
         bledy.append("🔴 Data wykonania kary wymaga daty wyroku skazującego.")
+
+    if data_czynu and data_dowiedzenia_o_sprawcy and data_dowiedzenia_o_sprawcy < data_czynu:
+        bledy.append("🔴 Data dowiedzenia się o osobie sprawcy nie może być wcześniejsza niż data czynu.")
 
     # --- Ostrzeżenia ---
     if not czy_delikt:

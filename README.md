@@ -31,7 +31,8 @@ obliczeniową oddzieloną od interfejsu i pokrytą testami jednostkowymi.
   uznanie długu, wyrok, egzekucja, umorzenie egzekucji.
 - **Szkody i odpowiedzialność pracownicza** (deliktowa) – osobna data zdarzenia i
   dowiedzenia się o szkodzie oraz sprawcy, kwalifikacja przestępstwa, umyślność.
-- **Przedawnienie karalności** – ustawowy termin oraz przedłużenie o 10 lat.
+- **Przedawnienie karalności** – ustawowy termin (art. 101 § 1 k.k.), oskarżenie
+  prywatne (art. 101 § 2 k.k.) oraz przedłużenie o 10 lat.
 - **Zatarcie skazania** – automatyczne oraz w drodze wyjątku na wniosek.
 - **Walidacja danych** – blokada obliczeń przy sprzecznych danych i jasne
   komunikaty o brakach.
@@ -55,7 +56,7 @@ obliczeniową oddzieloną od interfejsu i pokrytą testami jednostkowymi.
 | Zagadnienie | Podstawa | Zastosowana reguła |
 |---|---|---|
 | Szkoda bez kwalifikacji karnej | art. 442¹ § 1 k.c. | 3 lata od dowiedzenia się, max 10 lat od zdarzenia |
-| Szkoda z przestępstwa | art. 442¹ § 2 k.c. | 20 lat od popełnienia czynu |
+| Szkoda z przestępstwa | art. 442¹ § 2 k.c. | 20 lat od popełnienia czynu (bezwzględny limit – reset go nie wydłuża) |
 | Odpowiedzialność pracownicza | art. 291 § 1 k.p. | 3 lata od dowiedzenia się o szkodzie i sprawcy |
 | Umyślność szkody pracownika | art. 122 k.p. | ostrzeżenie o pełnym zakresie odpowiedzialności |
 
@@ -63,6 +64,7 @@ obliczeniową oddzieloną od interfejsu i pokrytą testami jednostkowymi.
 | Zagadnienie | Podstawa | Zastosowana reguła |
 |---|---|---|
 | Ustawowe przedawnienie karalności | art. 101 § 1 k.k. | termin zależny od kwalifikacji czynu |
+| Karalność – oskarżenie prywatne | art. 101 § 2 k.k. | 1 rok od dowiedzenia się o sprawcy, max 3 lata od czynu |
 | Przedłużenie karalności | art. 102 k.k. | +10 lat, jeżeli wszczęto postępowanie przeciwko osobie w terminie |
 | Zatarcie z mocy prawa | art. 107 § 1 k.k. | 3 / 5 / 10 lat od wykonania kary |
 | Zatarcie w drodze wyjątku | art. 107 § 4 k.k. | min. 5 lat, na wniosek skazanego |
@@ -74,9 +76,10 @@ obliczeniową oddzieloną od interfejsu i pokrytą testami jednostkowymi.
 Aplikacja **jawnie zgłasza** przypadki, których nie obsługuje, zamiast podawać
 niepewne terminy jako pewne:
 
-- Przestępstwa ścigane z oskarżenia prywatnego (art. 101 § 2 k.k.) – inny termin.
 - Przepisy szczególne przewidujące odrębne terminy przedawnienia.
 - Przedłużenie karalności, gdy nie podano daty wszczęcia postępowania przeciwko osobie.
+- Karalność przy oskarżeniu prywatnym bez daty dowiedzenia się o osobie sprawcy
+  (status „dane niewystarczające”).
 - Zatarcie, gdy nie podano daty wykonania / darowania kary (status „dane niewystarczające”).
 - Złożone stany faktyczne (czyny ciągłe, skutkowe, wielodniowe) wymagają oceny indywidualnej.
 
@@ -94,7 +97,7 @@ orientacyjny i **wymagają przeglądu prawnego**.
 
 - Python 3.11 lub 3.12
 - Zależności runtime: `streamlit`, `python-dateutil` (wersje w `requirements.txt`)
-- Zależności deweloperskie: `pytest` (`requirements-dev.txt`)
+- Zależności deweloperskie: `pytest`, `ruff` (`requirements-dev.txt`)
 
 ---
 
@@ -154,11 +157,18 @@ Zakres testów:
 
 | Plik | Zakres | Liczba |
 |---|---|---|
-| `tests/test_obliczenia.py` | logika umowna, karna, zatarcie | 33 |
-| `tests/test_deliktowa.py` | szkody / odpowiedzialność pracownicza | 18 |
-| `tests/test_validacja.py` | walidacja danych wejściowych | 19 |
+| `tests/test_obliczenia.py` | logika umowna, karna, zatarcie | 35 |
+| `tests/test_deliktowa.py` | szkody / odpowiedzialność pracownicza | 19 |
+| `tests/test_validacja.py` | walidacja danych wejściowych | 21 |
+| `tests/test_podstawy.py` | spójność podstaw prawnych (stałe) | 5 |
 | `tests/test_app_smoke.py` | dymny test interfejsu (AppTest) | 4 |
-| **Razem** | | **74** |
+| **Razem** | | **84** |
+
+Lint kodu (Ruff):
+
+```bash
+ruff check .
+```
 
 ---
 
@@ -169,8 +179,9 @@ Zakres testów:
 ├── obliczenia.py                   # Logika obliczeniowa (bez zależności od UI)
 ├── walidacja.py                    # Walidacja danych wejściowych
 ├── requirements.txt                # Zależności runtime (przypięte wersje)
-├── requirements-dev.txt            # Zależności deweloperskie (pytest)
+├── requirements-dev.txt            # Zależności deweloperskie (pytest, ruff)
 ├── pytest.ini                      # Konfiguracja pytest
+├── ruff.toml                       # Konfiguracja lintera Ruff
 ├── README.md                       # Dokumentacja
 ├── .gitignore
 ├── .github/workflows/tests.yml     # CI – automatyczne testy
@@ -180,6 +191,7 @@ Zakres testów:
     ├── test_obliczenia.py
     ├── test_deliktowa.py
     ├── test_validacja.py
+    ├── test_podstawy.py
     └── test_app_smoke.py
 ```
 
@@ -202,6 +214,18 @@ Architektura rozdziela trzy warstwy:
 | 4 | Szkody i odpowiedzialność pracownicza (art. 442¹ k.c., art. 291 k.p.) | `e2c6dfb` |
 | 5 | Część karna i zatarcie (art. 101, 102, 107 k.k.) | `629702f` |
 | 6 | Stabilna wersja: przypięte zależności, CI, dokumentacja, refaktor walidacji | — |
+| 7 | Raport: rodzaj zdarzenia (opisowo) + widok osi czasu zdarzeń | `d6a8801` |
+| 8a | Uproszczenie `_oblicz_termin_koncowy` (usunięcie martwego fallbacku) | `e47897d` |
+| 8b | Walidacja: umorzenie egzekucji nie przed datą zdarzenia deliktowego | `9a3c665` |
+| 8c | Dokumentacja: licznik testów i notka bezpieczeństwa meta tagów | `3ef03a3` |
+| A | Lint (Ruff), usunięcie martwego kodu i nieużywanych importów | `—` |
+| B | Spójność podstaw prawnych: wspólne stałe dla logiki i interfejsu | `—` |
+| C | Obsługa oskarżenia prywatnego (art. 101 § 2 k.k.) | `—` |
+| D | Bezwzględny limit 20 lat od czynu po resecie biegu (art. 442¹ § 2 k.c.) | `—` |
+| E | Dopełnienie walidacji deliktów i daty oskarżenia prywatnego | `—` |
+| F | Dokumentacja: uzupełnienie historii zmian i opisu funkcji | `—` |
+
+> Fazy 7–8c są zacommitowane. Fazy A–F to bieżący przegląd kodu (stan: niecommitowany).
 
 ---
 

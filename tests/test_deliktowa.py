@@ -3,7 +3,6 @@ from datetime import date
 from obliczenia import (
     analiza_deliktowa,
     TypOdpowiedzialnosci,
-    WynikAnalizyCywilnej,
 )
 
 
@@ -228,6 +227,19 @@ def test_delikt_reset_nie_wydluza_cap_10_lat():
     # Bez capa byłoby 2026-01-01 (OK); z capem 2020-01-01 (PRZEDAWNIONE).
     assert r.termin == date(2020, 1, 1)
     assert r.status == "PRZEDAWNIONE"
+
+
+def test_przestepstwo_reset_nie_wydluza_cap_20_lat():
+    """Reset wpłatą nie wydłuża bezwzględnych 20 lat od czynu (art. 442¹ § 2 k.c.)."""
+    w = _wywolaj(
+        date(2010, 1, 1), date(2010, 1, 1),
+        czy_przestepstwo=True,
+        wpłaty=[date(2023, 1, 1)], data_oceny=date(2025, 1, 1)
+    )
+    r = w.wyniki[0]
+    # Bez capa byłoby 2043-01-01; z capem 2030-01-01 (2010 + 20 lat).
+    assert r.termin == date(2030, 1, 1)
+    assert any("20 lat od zdarzenia" in z for z in r.zalozenia)
 
 
 if __name__ == "__main__":

@@ -410,6 +410,49 @@ def test_delikt_przestepstwo_ostrzezenie_bez_dowiedzenia():
     assert any("Data czynu jest późniejsza" in o for o in ostrzezenia)
 
 
+def test_delikt_wyrok_przed_dowiedzeniem():
+    """Delikt: wyrok cywilny przed datą dowiedzenia się o szkodzie -> błąd."""
+    bledy, _ = waliduj_dane(
+        data_zawarcia_umowy=None,
+        data_wymagalnosci=None,
+        data_zdarzenia=date(2023, 1, 1),
+        data_dowiedzenia=date(2023, 6, 1),
+        wpłaty=[],
+        data_wyroku_cywilnego=date(2023, 3, 1),
+        data_wszcz_egzekucji=None,
+        data_umor_egzekucji=None,
+        data_czynu=None,
+        wszczecie_k=None,
+        umorzenie_k=None,
+        wyrok_k=None,
+        data_wykonania_kary=None,
+        czy_delikt=True
+    )
+    assert any("Wyrok cywilny" in b and "dowiedzenia się o szkodzie" in b for b in bledy)
+
+
+def test_oskarzenie_prywatne_dowiedzenie_przed_czynem():
+    """Oskarżenie prywatne: dowiedzenie o osobie sprawcy przed czynem -> błąd."""
+    bledy, _ = waliduj_dane(
+        data_zawarcia_umowy=None,
+        data_wymagalnosci=None,
+        data_zdarzenia=None,
+        data_dowiedzenia=None,
+        wpłaty=[],
+        data_wyroku_cywilnego=None,
+        data_wszcz_egzekucji=None,
+        data_umor_egzekucji=None,
+        data_czynu=date(2023, 6, 1),
+        wszczecie_k=None,
+        umorzenie_k=None,
+        wyrok_k=None,
+        data_wykonania_kary=None,
+        czy_delikt=False,
+        data_dowiedzenia_o_sprawcy=date(2023, 1, 1)
+    )
+    assert any("osobie sprawcy" in b for b in bledy)
+
+
 if __name__ == "__main__":
     import pytest
     pytest.main([__file__, "-v"])

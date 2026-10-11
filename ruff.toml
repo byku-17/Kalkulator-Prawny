@@ -1,0 +1,7 @@
+# Konfiguracja Ruff – lint (uruchamiany lokalnie i w CI).
+target-version = "py311"
+line-length = 120
+
+[lint]
+# E9 – błędy składni/wykonania; F – pyflakes (nieużywane importy/zmienne, undefined names).
+select = ["E9", "F"]

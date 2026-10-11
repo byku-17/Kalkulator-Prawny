@@ -1,14 +1,19 @@
 import streamlit as st
 from datetime import date
 from obliczenia import (
-    analiza_cywilna,
-    analiza_deliktowa,
-    analiza_karna,
-    analiza_zatarcia,
+    LATA_UMOWNE,
+    PODSTAWA_DELIKTOWA,
+    PODSTAWA_PRACOWNICZA,
+    PODSTAWA_PRZESTEPSTWO,
+    PODSTAWA_UMOWNA,
     TypOdpowiedzialnosci,
     WynikAnalizyCywilnej,
     WynikAnalizyKarne,
     WynikAnalizyZatarcia,
+    analiza_cywilna,
+    analiza_deliktowa,
+    analiza_karna,
+    analiza_zatarcia,
 )
 from walidacja import waliduj_dane
 
@@ -97,9 +102,10 @@ czy_umyslne = False
 if not czy_delikt:
     typ_odpowiedzialnosci = TypOdpowiedzialnosci.UMOWNA
     rodzaj_zdarzenia = None
-    st.info("📌 **Podstawa cywilna:** Roszczenie związane z prowadzeniem działalności gospodarczej. Co do zasady: **3 lata** (art. 118 k.c.).")
-    lata_cywilne_baza = 3
-    podstawa_cywilna = "Art. 118 k.c. (działalność gospodarcza)"
+    st.info(
+        f"📌 **Podstawa cywilna:** {PODSTAWA_UMOWNA} – roszczenie związane z prowadzeniem "
+        f"działalności gospodarczej. Co do zasady: **{LATA_UMOWNE} lata**."
+    )
 else:
     typ_odpowiedzialnosci = (
         TypOdpowiedzialnosci.PRACOWNICZA if czy_pracownik else TypOdpowiedzialnosci.DELIKTOWA
@@ -114,21 +120,18 @@ else:
 
     if czy_pracownik:
         st.info(
-            "📌 **Reżim pracowniczy:** Odpowiedzialność materialna pracownika. "
-            "Co do zasady: **3 lata** od dowiedzenia się o szkodzie i sprawcy (art. 291 § 1 k.p.)."
+            f"📌 **Reżim pracowniczy:** {PODSTAWA_PRACOWNICZA}. Odpowiedzialność materialna "
+            "pracownika – co do zasady **3 lata** od dowiedzenia się o szkodzie i sprawcy."
         )
-        podstawa_cywilna = "Art. 291 § 1 k.p. (odpowiedzialność pracownicza)"
-        lata_cywilne_baza = 3
-    else:
-        podstawa_cywilna = "Art. 442¹ k.c. (szkoda deliktowa)"
-        lata_cywilne_baza = 3
 
     if czy_przestepstwo:
-        st.error("📌 **Podstawa cywilna:** Szkoda ze zbrodni lub występku. Przedawnienie: **20 lat** od popełnienia przestępstwa (art. 442¹ § 2 k.c.).")
-        lata_cywilne_baza = 20
-        podstawa_cywilna = "Art. 442¹ § 2 k.c. (szkoda z przestępstwa)"
+        st.error(f"📌 **Podstawa cywilna:** {PODSTAWA_PRZESTEPSTWO}. Przedawnienie: **20 lat** od popełnienia przestępstwa.")
     elif not czy_pracownik:
-        st.warning("📌 **Podstawa cywilna:** Czyn niedozwolony bez kwalifikacji karnej. Przedawnienie: **3 lata** od dnia dowiedzenia się o szkodzie ORAZ o osobie obowiązanej do jej naprawienia, nie dłużej niż 10 lat od zdarzenia (art. 442¹ § 1 k.c.).")
+        st.warning(
+            f"📌 **Podstawa cywilna:** {PODSTAWA_DELIKTOWA}. Czyn niedozwolony bez kwalifikacji "
+            "karnej – przedawnienie: **3 lata** od dnia dowiedzenia się o szkodzie ORAZ o osobie "
+            "obowiązanej do jej naprawienia, nie dłużej niż 10 lat od zdarzenia."
+        )
 
 # ─────────────────────────────────────────────
 # 2. WPROWADZANIE DAT
@@ -193,7 +196,11 @@ with col2:
         "Zbrodnia np. podrabianie środków płatniczych (przedawnienie: 20 lat)": 20
     }
     wybor_kk = st.selectbox("Kwalifikacja czynu (najczęstsze przestępstwa)", list(OPCJE_KK.keys()), help="Wybierz konkretny artykuł k.k., aby ustalić ustawowy okres przedawnienia karalności.")
-    czy_oskarzenie_prywatne = st.checkbox("Przestępstwo ścigane z oskarżenia prywatnego?", help="Art. 101 § 2 k.k. – odrębny termin (1 rok od dowiedzenia się o sprawcy). Obecnie nieobsługiwane, zostanie zgłoszone.")
+    czy_oskarzenie_prywatne = st.checkbox("Przestępstwo ścigane z oskarżenia prywatnego?", help="Art. 101 § 2 k.k. – odrębny termin: 1 rok od dowiedzenia się o osobie sprawcy, nie później niż 3 lata od czynu.")
+    if czy_oskarzenie_prywatne:
+        data_dowiedzenia_o_sprawcy = st.date_input("Data dowiedzenia się o osobie sprawcy", value=None, min_value=MIN_DATE, help="Wymagana dla oskarżenia prywatnego (art. 101 § 2 k.k.). Bez niej wynik karny będzie niepewny.")
+    else:
+        data_dowiedzenia_o_sprawcy = None
 
     wszczecie_k = st.date_input("Data wszczęcia postępowania karnego (przeciwko osobie)", value=None, min_value=MIN_DATE, help="Wszczęcie postępowania PRZECIWKO OSOBIE przed upływem terminu przedłuża karalność o 10 lat (art. 102 k.k.).")
     umorzenie_k = st.date_input("Data umorzenia postępowania karnego", value=None, min_value=MIN_DATE)
@@ -221,7 +228,7 @@ if st.button("Przeprowadź analizę", type="primary"):
         data_zawarcia_umowy, data_wymagalnosci, data_zdarzenia, data_dowiedzenia, wpłaty,
         data_wyroku_cywilnego, data_wszcz_egzekucji, data_umor_egzekucji,
         data_czynu, wszczecie_k, umorzenie_k, wyrok_k, data_wykonania_kary,
-        czy_delikt
+        czy_delikt, data_dowiedzenia_o_sprawcy
     )
 
     # Wyświetl wszystkie błędy naraz
@@ -243,7 +250,7 @@ if st.button("Przeprowadź analizę", type="primary"):
             wynik_cywilny = analiza_cywilna(
                 data_zawarcia_umowy, data_wymagalnosci, wpłaty,
                 data_wyroku_cywilnego, data_wszcz_egzekucji, data_umor_egzekucji,
-                lata_cywilne_baza, podstawa_cywilna,
+                LATA_UMOWNE, PODSTAWA_UMOWNA,
                 data_oceny
             )
         else:
@@ -270,7 +277,7 @@ if st.button("Przeprowadź analizę", type="primary"):
     if data_czynu is not None:
         wynik_karny = analiza_karna(
             data_czynu, OPCJE_KK[wybor_kk], wszczecie_k, umorzenie_k,
-            data_oceny, czy_oskarzenie_prywatne
+            data_oceny, czy_oskarzenie_prywatne, data_dowiedzenia_o_sprawcy
         )
     else:
         wynik_karny = WynikAnalizyKarne(

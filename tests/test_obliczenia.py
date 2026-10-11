@@ -7,9 +7,6 @@ from obliczenia import (
     analiza_karna,
     analiza_zatarcia,
     TypOdpowiedzialnosci,
-    WynikAnalizyCywilnej,
-    WynikAnalizyKarne,
-    WynikAnalizyZatarcia,
 )
 
 
@@ -134,10 +131,9 @@ def test_cywilna_bez_reguly_konca_roku_przed_2018():
 
 def test_cywilna_delikt_bez_reguly_konca_roku():
     """Szkoda deliktowa (art. 442¹) -> bez reguły końca roku (przez analiza_deliktowa)."""
-    from datetime import date as _d
     wynik = analiza_deliktowa(
-        data_zdarzenia=_d(2020, 6, 15),
-        data_dowiedzenia_o_szkodzie=_d(2020, 6, 15),
+        data_zdarzenia=date(2020, 6, 15),
+        data_dowiedzenia_o_szkodzie=date(2020, 6, 15),
         czy_przestepstwo=False,
         czy_umyslne=False,
         typ_odpowiedzialnosci=TypOdpowiedzialnosci.DELIKTOWA,
@@ -337,17 +333,52 @@ def test_karna_brak_daty_czynu():
     assert "Brak daty czynu" in wynik.bledy[0]
 
 
-def test_karna_oskarzenie_prywatne_nieobslugiwane():
-    """Oskarżenie prywatne -> zgłoszony przypadek nieobsługiwany."""
+def test_karna_oskarzenie_prywatne_1_rok():
+    """Oskarżenie prywatne: 1 rok od dowiedzenia się o sprawcy (art. 101 § 2 k.k.)."""
     wynik = analiza_karna(
         data_czynu=date(2020, 1, 1),
         lata_karne=5,
         data_wszcz_k=None,
         data_umor_k=None,
-        data_oceny=date(2025, 1, 1),
+        data_oceny=date(2021, 1, 1),
+        czy_oskarzenie_prywatne=True,
+        data_dowiedzenia_o_sprawcy=date(2020, 6, 1)
+    )
+    w = wynik.wyniki[0]
+    assert w.termin == date(2021, 6, 1)
+    assert w.status == "TRWA"
+    assert "101 § 2" in w.podstawa_prawna
+
+
+def test_karna_oskarzenie_prywatne_limit_3_lat_od_czynu():
+    """Oskarżenie prywatne: bezwzględny limit 3 lat od czynu wygrywa z 1 rokiem."""
+    wynik = analiza_karna(
+        data_czynu=date(2018, 1, 1),
+        lata_karne=5,
+        data_wszcz_k=None,
+        data_umor_k=None,
+        data_oceny=date(2020, 1, 1),
+        czy_oskarzenie_prywatne=True,
+        data_dowiedzenia_o_sprawcy=date(2020, 6, 1)
+    )
+    w = wynik.wyniki[0]
+    assert w.termin == date(2021, 1, 1)  # 3 lata od czynu
+    assert any("3 lat" in z for z in w.zalozenia)
+
+
+def test_karna_oskarzenie_prywatne_brak_daty():
+    """Oskarżenie prywatne bez daty dowiedzenia -> BRAK_DANYCH (nie fałszywy termin)."""
+    wynik = analiza_karna(
+        data_czynu=date(2020, 1, 1),
+        lata_karne=5,
+        data_wszcz_k=None,
+        data_umor_k=None,
+        data_oceny=date(2021, 1, 1),
         czy_oskarzenie_prywatne=True
     )
-    assert any("oskarżenia prywatnego" in n for n in wynik.nieobslugiwane)
+    w = wynik.wyniki[0]
+    assert w.status == "BRAK_DANYCH"
+    assert "101 § 2" in w.podstawa_prawna
 
 
 def test_karna_brak_wszczecia_ostrzezenie():
