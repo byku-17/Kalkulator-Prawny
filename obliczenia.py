@@ -116,12 +116,12 @@ def analiza_cywilna(
     data_umor_egzekucji: Optional[date],
     lata_baza: int,
     podstawa_prawna: str,
-    czy_delikt: bool,
     data_oceny: date
 ) -> WynikAnalizyCywilnej:
     """
-    Analiza przedawnienia cywilnego - przetwarzanie zdarzeń chronologicznie.
-    
+    Analiza przedawnienia cywilnego umownego - przetwarzanie zdarzeń chronologicznie.
+    Delikty/szkody obsługuje wyłącznie analiza_deliktowa.
+
     Zasady:
     - art. 118 k.c.: 3 lata od wymagalności (działalność gospodarcza)
     - art. 123 k.c.: uznanie długu (wpłata) -> bieg od nowa od daty uznania
@@ -145,24 +145,12 @@ def analiza_cywilna(
     # Buduj oś czasu zdarzeń
     zdarzenia: list[ZdarzeniePrzedawnienia] = []
 
-    # Dla deliktów: data_zawarcia_umowy nie ma znaczenia dla przepisów przejściowych
-    # (szkoda deliktowa zawsze bez końca roku zgodnie z art. 442¹ k.c.)
-    if czy_delikt:
-        data_dla_rezimu = data_wymagalnosci
-    else:
-        data_dla_rezimu = data_zawarcia_umowy if data_zawarcia_umowy else data_wymagalnosci
-    
-    stary_rezim = _czy_stara_przedawnienie(data_dla_rezimu)
-    if czy_delikt:
-        wynik.zalozenia.append(
-            f"Szkoda deliktowa (art. 442¹ k.c.): przepisy zawsze BEZ końca roku, "
-            f"niezależnie od daty."
-        )
-    else:
-        wynik.zalozenia.append(
-            f"Data zawarcia umowy: {_format_data(data_zawarcia_umowy)} – "
-            f"{'przepisy STARE (przed 09.07.2018, bez końca roku)' if stary_rezim else 'przepisy NOWE (po 09.07.2018, z końcem roku)'}"
-        )
+    # Reżim przedawnienia (stary/nowy) na podstawie daty ZAWARCIA umowy.
+    stary_rezim = _czy_stara_przedawnienie(data_zawarcia_umowy)
+    wynik.zalozenia.append(
+        f"Data zawarcia umowy: {_format_data(data_zawarcia_umowy)} – "
+        f"{'przepisy STARE (przed 09.07.2018, bez końca roku)' if stary_rezim else 'przepisy NOWE (po 09.07.2018, z końcem roku)'}"
+    )
     wynik.zalozenia.append(f"Data wymagalności (początek biegu): {_format_data(data_wymagalnosci)}")
 
     # 1. Start biegu
@@ -311,7 +299,7 @@ def analiza_cywilna(
         return wynik
 
     # Oblicz ostateczny termin
-    stosowac_koniec_roku = (not stary_rezim) and (not czy_delikt) and (not wyrok_uzyskany)
+    stosowac_koniec_roku = (not stary_rezim) and (not wyrok_uzyskany)
     
     if wyrok_uzyskany:
         # Dla wyroku nie ma reguły końca roku (art. 125 k.c. – 6 lat od wyroku)

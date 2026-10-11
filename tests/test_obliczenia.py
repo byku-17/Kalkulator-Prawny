@@ -3,8 +3,10 @@ from datetime import date
 from obliczenia import (
     dodaj_lata,
     analiza_cywilna,
+    analiza_deliktowa,
     analiza_karna,
     analiza_zatarcia,
+    TypOdpowiedzialnosci,
     WynikAnalizyCywilnej,
     WynikAnalizyKarne,
     WynikAnalizyZatarcia,
@@ -41,7 +43,6 @@ def test_cywilna_umowna_brak_przedawienia():
         data_umor_egzekucji=None,
         lata_baza=3,
         podstawa_prawna="Art. 118 k.c. (działalność gospodarcza)",
-        czy_delikt=False,
         data_oceny=date(2025, 1, 1)
     )
     assert len(wynik.wyniki) == 1
@@ -64,7 +65,6 @@ def test_cywilna_umowna_przedawiona():
         data_umor_egzekucji=None,
         lata_baza=3,
         podstawa_prawna="Art. 118 k.c. (działalność gospodarcza)",
-        czy_delikt=False,
         data_oceny=date(2024, 1, 1)
     )
     assert len(wynik.wyniki) == 1
@@ -85,7 +85,6 @@ def test_cywilna_z_wyrokiem_6_lat():
         data_umor_egzekucji=None,
         lata_baza=3,
         podstawa_prawna="Art. 118 k.c.",
-        czy_delikt=False,
         data_oceny=date(2025, 1, 1)
     )
     assert len(wynik.wyniki) == 1
@@ -106,7 +105,6 @@ def test_cywilna_regula_konca_roku_po_2018():
         data_umor_egzekucji=None,
         lata_baza=3,
         podstawa_prawna="Art. 118 k.c.",
-        czy_delikt=False,
         data_oceny=date(2025, 1, 1)
     )
     w = wynik.wyniki[0]
@@ -126,7 +124,6 @@ def test_cywilna_bez_reguly_konca_roku_przed_2018():
         data_umor_egzekucji=None,
         lata_baza=3,
         podstawa_prawna="Art. 118 k.c.",
-        czy_delikt=False,
         data_oceny=date(2025, 1, 1)
     )
     w = wynik.wyniki[0]
@@ -136,23 +133,24 @@ def test_cywilna_bez_reguly_konca_roku_przed_2018():
 
 
 def test_cywilna_delikt_bez_reguly_konca_roku():
-    """Szkoda deliktowa (art. 442¹) -> bez reguły końca roku."""
-    wynik = analiza_cywilna(
-        data_zawarcia_umowy=None,
-        data_wymagalnosci=date(2020, 6, 15),
+    """Szkoda deliktowa (art. 442¹) -> bez reguły końca roku (przez analiza_deliktowa)."""
+    from datetime import date as _d
+    wynik = analiza_deliktowa(
+        data_zdarzenia=_d(2020, 6, 15),
+        data_dowiedzenia_o_szkodzie=_d(2020, 6, 15),
+        czy_przestepstwo=False,
+        czy_umyslne=False,
+        typ_odpowiedzialnosci=TypOdpowiedzialnosci.DELIKTOWA,
         wpłaty=[],
         data_wyroku_cywilnego=None,
         data_wszcz_egzekucji=None,
         data_umor_egzekucji=None,
-        lata_baza=3,
-        podstawa_prawna="Art. 442¹ § 1 k.c. (szkoda deliktowa)",
-        czy_delikt=True,
         data_oceny=date(2025, 1, 1)
     )
     w = wynik.wyniki[0]
     # Delikty: bez końca roku, dokładnie 3 lata
     assert w.termin == date(2023, 6, 15)
-    assert any("bez końca roku" in z.lower() or "delikt" in z.lower() for z in w.zalozenia + w.ostrzezenia)
+    assert any("bez reguły końca roku" in o for o in w.ostrzezenia)
 
 
 def test_cywilna_wplata_przesuwa_start():
@@ -166,7 +164,6 @@ def test_cywilna_wplata_przesuwa_start():
         data_umor_egzekucji=None,
         lata_baza=3,
         podstawa_prawna="Art. 118 k.c.",
-        czy_delikt=False,
         data_oceny=date(2025, 1, 1)
     )
     w = wynik.wyniki[0]
@@ -186,7 +183,6 @@ def test_cywilna_wplata_po_wyroku_nie_przesuwa():
         data_umor_egzekucji=None,
         lata_baza=3,
         podstawa_prawna="Art. 118 k.c.",
-        czy_delikt=False,
         data_oceny=date(2025, 1, 1)
     )
     w = wynik.wyniki[0]
@@ -206,7 +202,6 @@ def test_cywilna_umorzenie_egzekucji_przesuwa_start():
         data_umor_egzekucji=date(2023, 1, 1),
         lata_baza=3,
         podstawa_prawna="Art. 118 k.c.",
-        czy_delikt=False,
         data_oceny=date(2025, 1, 1)
     )
     w = wynik.wyniki[0]
@@ -226,7 +221,6 @@ def test_cywilna_umorzenie_po_wyroku_nie_przesuwa():
         data_umor_egzekucji=date(2025, 1, 1),
         lata_baza=3,
         podstawa_prawna="Art. 118 k.c.",
-        czy_delikt=False,
         data_oceny=date(2026, 1, 1)
     )
     w = wynik.wyniki[0]
@@ -244,7 +238,6 @@ def test_cywilna_egzekucja_w_toku():
         data_umor_egzekucji=None,
         lata_baza=3,
         podstawa_prawna="Art. 118 k.c.",
-        czy_delikt=False,
         data_oceny=date(2025, 1, 1)
     )
     assert len(wynik.wyniki) == 1
@@ -264,7 +257,6 @@ def test_cywilna_brak_daty_wymagalnosci():
         data_umor_egzekucji=None,
         lata_baza=3,
         podstawa_prawna="Art. 118 k.c.",
-        czy_delikt=False,
         data_oceny=date(2025, 1, 1)
     )
     assert len(wynik.bledy) == 1
@@ -475,7 +467,6 @@ def test_scenariusz_pozyczka_z_wplata():
         data_umor_egzekucji=None,
         lata_baza=3,
         podstawa_prawna="Art. 118 k.c.",
-        czy_delikt=False,
         data_oceny=date(2024, 1, 1)
     )
     w = wynik.wyniki[0]
@@ -494,7 +485,6 @@ def test_scenariusz_wyrok_egzekucja_umorzenie():
         data_umor_egzekucji=date(2024, 1, 1),
         lata_baza=3,
         podstawa_prawna="Art. 118 k.c.",
-        czy_delikt=False,
         data_oceny=date(2025, 1, 1)
     )
     w = wynik.wyniki[0]
@@ -514,7 +504,6 @@ def test_scenariusz_egzekucja_umorzenie_bez_wyroku():
         data_umor_egzekucji=date(2024, 1, 1),
         lata_baza=3,
         podstawa_prawna="Art. 118 k.c.",
-        czy_delikt=False,
         data_oceny=date(2025, 1, 1)
     )
     w = wynik.wyniki[0]
@@ -533,7 +522,6 @@ def test_scenariusz_wielokrotne_wplaty():
         data_umor_egzekucji=None,
         lata_baza=3,
         podstawa_prawna="Art. 118 k.c.",
-        czy_delikt=False,
         data_oceny=date(2025, 1, 1)
     )
     w = wynik.wyniki[0]

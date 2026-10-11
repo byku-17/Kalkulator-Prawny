@@ -241,7 +241,7 @@ if st.button("Przeprowadź analizę", type="primary"):
             wynik_cywilny = analiza_cywilna(
                 data_zawarcia_umowy, data_wymagalnosci, wpłaty,
                 data_wyroku_cywilnego, data_wszcz_egzekucji, data_umor_egzekucji,
-                lata_cywilne_baza, podstawa_cywilna, czy_delikt,
+                lata_cywilne_baza, podstawa_cywilna,
                 data_oceny
             )
         else:
