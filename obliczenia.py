@@ -727,8 +727,8 @@ def analiza_karna(
     - art. 101 § 2 k.k.: przestępstwa ścigane z oskarżenia prywatnego – 1 rok od
       dowiedzenia się przez pokrzywdzonego o osobie sprawcy, nie później niż
       3 lata od popełnienia czynu (wymaga data_dowiedzenia_o_sprawcy)
-    - art. 102 k.k.: przedłużenie o 10 lat, jeżeli w okresie przedawnienia
-      wszczęto postępowanie PRZECIWKO OSOBIE
+    - art. 102 § 1 k.k.: przedłużenie karalności, jeżeli w okresie przedawnienia
+      wszczęto postępowanie – o 10 lat (art. 101 § 1), o 5 lat (oskarżenie prywatne)
 
     Nieobsługiwane (zgłaszane jawnie):
     - przepisy szczególne przewidujące inne terminy przedawnienia
@@ -794,18 +794,21 @@ def analiza_karna(
 
     termin_karny = termin_pierwotny
 
-    # Art. 102 k.k.: przedłużenie karalności o 10 lat
+    # Art. 102 § 1 k.k.: przedłużenie karalności – o 10 lat dla przestępstw z art. 101 § 1,
+    # a w pozostałych wypadkach (oskarżenie prywatne, art. 101 § 2) – o 5 lat.
+    lata_przedluzenia = 5 if czy_oskarzenie_prywatne else 10
     if data_wszcz_k:
         if data_wszcz_k <= termin_pierwotny:
-            termin_karny = dodaj_lata(termin_pierwotny, 10)
+            termin_karny = dodaj_lata(termin_pierwotny, lata_przedluzenia)
             wynik.zalozenia.append(
-                f"Wszczęcie postępowania przeciwko osobie: {_format_data(data_wszcz_k)} "
-                f"(w okresie przedawnienia)"
+                f"Wszczęcie postępowania: {_format_data(data_wszcz_k)} (w okresie przedawnienia)"
             )
-            wynik.zalozenia.append("Karalność przedłużona o 10 lat (art. 102 k.k.).")
+            wynik.zalozenia.append(
+                f"Karalność przedłużona o {lata_przedluzenia} lat (art. 102 § 1 k.k.)."
+            )
             wynik.ostrzezenia.append(
-                "Art. 102 k.k.: wszczęto postępowanie przeciwko osobie przed upływem "
-                "pierwotnego terminu – karalność przedłużona o 10 lat."
+                f"Art. 102 § 1 k.k.: wszczęto postępowanie przed upływem pierwotnego terminu – "
+                f"karalność przedłużona o {lata_przedluzenia} lat."
             )
         else:
             wynik.ostrzezenia.append(

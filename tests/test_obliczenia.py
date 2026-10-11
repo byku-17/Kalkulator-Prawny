@@ -419,6 +419,23 @@ def test_karna_oskarzenie_prywatne_brak_daty():
     assert "101 § 2" in w.podstawa_prawna
 
 
+def test_karna_oskarzenie_prywatne_art102_plus_5_lat():
+    """Oskarżenie prywatne: przedłużenie karalności o 5 lat (art. 102 § 1 k.k.)."""
+    wynik = analiza_karna(
+        data_czynu=date(2018, 1, 1),
+        lata_karne=5,
+        data_wszcz_k=date(2019, 1, 1),
+        data_umor_k=None,
+        data_oceny=date(2021, 1, 1),
+        czy_oskarzenie_prywatne=True,
+        data_dowiedzenia_o_sprawcy=date(2018, 6, 1)
+    )
+    w = wynik.wyniki[0]
+    # pierwotny = min(2019-06-01, 2021-01-01) = 2019-06-01; +5 lat = 2024-06-01
+    assert w.termin == date(2024, 6, 1)
+    assert any("5 lat" in z for z in w.zalozenia)
+
+
 def test_karna_brak_wszczecia_ostrzezenie():
     """Brak daty wszczęcia -> ostrzeżenie o niepełnym wyniku."""
     wynik = analiza_karna(

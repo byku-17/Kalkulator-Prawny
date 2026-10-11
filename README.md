@@ -163,12 +163,12 @@ Zakres testów:
 
 | Plik | Zakres | Liczba |
 |---|---|---|
-| `tests/test_obliczenia.py` | logika umowna, karna, zatarcie | 38 |
+| `tests/test_obliczenia.py` | logika umowna, karna, zatarcie | 39 |
 | `tests/test_deliktowa.py` | szkody / odpowiedzialność pracownicza | 22 |
 | `tests/test_validacja.py` | walidacja danych wejściowych | 21 |
 | `tests/test_podstawy.py` | spójność podstaw prawnych (stałe) | 5 |
 | `tests/test_app_smoke.py` | dymny test interfejsu (AppTest) | 4 |
-| **Razem** | | **90** |
+| **Razem** | | **91** |
 
 Lint kodu (Ruff):
 
