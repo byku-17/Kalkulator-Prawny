@@ -324,14 +324,17 @@ if st.button("Sprawdź sprawę", type="primary"):
         czy_delikt,
     )
     if bledy:
-        for blad in bledy:
-            st.error(blad)
+        st.error("❌ **Nie można sprawdzić:** " + "; ".join(bledy))
         st.stop()
     for ost in ostrzezenia:
         st.warning(ost)
 
     data_oceny = date.today()
-    st.subheader("Wynik")
+    st.subheader("Wynik analizy")
+
+    # Status ogólny
+    status_ok = False
+    komunikaty = []
 
     # --- Cywilnie: roszczenie / tytuł wykonawczy ---
     wynik_cywilny: WynikAnalizyCywilnej | None = None
@@ -353,9 +356,15 @@ if st.button("Sprawdź sprawę", type="primary"):
     if wynik_cywilny and wynik_cywilny.wyniki:
         st.markdown("#### Roszczenie / tytuł wykonawczy")
         _karta_cywilna(wynik_cywilny)
+        status_ok = True
     elif wynik_cywilny:
         for o in wynik_cywilny.ostrzezenia:
             st.info(o)
+        if not (etap_cywilny or etap_egzekucja):
+            st.info("ℹ️ Brak danych do analizy cywilnej — uzupełnij datę wymagalności (klient) lub datę zdarzenia i dowiedzenia (deficyt).")
+    else:
+        if not (etap_cywilny or etap_egzekucja or etap_karny or etap_zatarcie):
+            st.info("ℹ️ Nie wybrano żadnego etapu do analizy. Zaznacz co już się stało, aby uzyskać wynik.")
 
     # --- Karne: karalność (per czyn) ---
     if etap_karny and data_czynu is not None and kwalifikacje:
@@ -366,6 +375,7 @@ if st.button("Sprawdź sprawę", type="primary"):
             wyniki_karne.append(wk)
             st.markdown(f"**{kwal}**")
             _karta_karna(wk)
+            wyniki_karne.append(wk)
         terminy = [wk.wyniki[0].termin for wk in wyniki_karne if wk.wyniki]
         if len(terminy) > 1:
             st.info(f"➡️ Najdłuższy termin karalności: **{max(terminy).strftime('%d.%m.%Y')}**.")
@@ -389,3 +399,10 @@ if st.button("Sprawdź sprawę", type="primary"):
         )
         st.markdown("#### Zatarcie skazania")
         _karta_zatarcia(wynik_zatarcia)
+
+    # Podsumowanie ogólne
+    if not any([wynik_cywilny and wynik_cywilny.wyniki,
+                'wyniki_karne' in locals() and wyniki_karne,
+                'wynik_wykonania' in locals() and wynik_wykonania.wyniki,
+                'wynik_zatarcia' in locals() and wynik_zatarcia.wyniki]):
+        st.warning("⚠️ Brak wyników do wyświetlenia — uzupełnij wymagane dane w sekcji powyżej.")
