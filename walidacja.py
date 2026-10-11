@@ -84,7 +84,12 @@ def waliduj_dane(
         bledy.append("🔴 Data wykonania kary wymaga daty wyroku skazującego.")
 
     # --- Ostrzeżenia ---
-    ref_cywilna = data_wymagalnosci if not czy_delikt else data_dowiedzenia
+    if not czy_delikt:
+        ref_cywilna = data_wymagalnosci
+    else:
+        # Dla szkody z przestępstwa data dowiedzenia może być pusta —
+        # wtedy punktem odniesienia jest data zdarzenia.
+        ref_cywilna = data_dowiedzenia if data_dowiedzenia is not None else data_zdarzenia
     if data_czynu and ref_cywilna and data_czynu > ref_cywilna:
         ostrzezenia.append("⚠️ Data czynu jest późniejsza niż cywilna data bazowa. Sprawdź poprawność.")
 
