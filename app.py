@@ -160,6 +160,7 @@ czy_przestepstwo = False
 czy_umyslne = False
 wpłaty: list[date] = []
 data_wyroku_cywilnego = None
+data_klauzuli = None
 data_wszcz_egzekucji = None
 data_umor_egzekucji = None
 data_czynu = None
@@ -203,6 +204,10 @@ if etap_cywilny:
     data_wyroku_cywilnego = st.date_input(
         "Data prawomocnego wyroku / nakazu cywilnego", value=None, min_value=MIN_DATE,
         help="Roszczenie stwierdzone orzeczeniem przedawnia się z upływem 6 lat (10 lat, gdy orzeczenie przed 09.07.2018) – art. 125 § 1 k.c.",
+    )
+    data_klauzuli = st.date_input(
+        "Data klauzuli wykonalności (start terminu, art. 125 § 1 k.c.)", value=None, min_value=MIN_DATE,
+        help="Jeśli brak – termin liczony od daty orzeczenia.",
     )
 
 if etap_egzekucja:
@@ -325,7 +330,7 @@ if st.button("Sprawdź sprawę", type="primary"):
             wynik_cywilny = analiza_cywilna(
                 data_zawarcia_umowy, data_wymagalnosci, wpłaty,
                 data_wyroku_cywilnego, data_wszcz_egzekucji, data_umor_egzekucji,
-                LATA_UMOWNE, PODSTAWA_UMOWNA, data_oceny,
+                LATA_UMOWNE, PODSTAWA_UMOWNA, data_oceny, data_klauzuli,
             )
     else:
         if data_zdarzenia is not None:
@@ -333,7 +338,7 @@ if st.button("Sprawdź sprawę", type="primary"):
                 data_zdarzenia, data_dowiedzenia, czy_przestepstwo, czy_umyslne,
                 TypOdpowiedzialnosci.PRACOWNICZA if jest_pracownik else TypOdpowiedzialnosci.DELIKTOWA,
                 wpłaty, data_wyroku_cywilnego, data_wszcz_egzekucji, data_umor_egzekucji,
-                data_oceny,
+                data_oceny, data_klauzuli=data_klauzuli,
             )
     if wynik_cywilny and wynik_cywilny.wyniki:
         st.markdown("#### Roszczenie / tytuł wykonawczy")

@@ -50,7 +50,7 @@ obliczeniową oddzieloną od interfejsu i pokrytą testami jednostkowymi.
 | Uznanie długu / wpłata | art. 123 k.c. | nowy bieg od daty uznania |
 | Wszczęcie egzekucji | art. 124 k.c. | zawieszenie biegu |
 | Umorzenie egzekucji | art. 124 § 2 k.c. | bieg od nowa od umorzenia |
-| Prawomocny wyrok / nakaz | art. 125 § 1 k.c. | 6 lat od wyroku (10 lat, gdy orzeczenie przed 09.07.2018) |
+| Prawomocny wyrok / nakaz (tytuł wykonawczy) | art. 125 § 1 k.c. | 6 lat (10 lat przed 09.07.2018); start: data klauzuli wykonalności lub orzeczenia |
 
 ### Część cywilna – szkody / pracownik
 | Zagadnienie | Podstawa | Zastosowana reguła |
@@ -166,7 +166,7 @@ Zakres testów:
 
 | Plik | Zakres | Liczba |
 |---|---|---|
-| `tests/test_obliczenia.py` | logika umowna, karna, zatarcie | 43 |
+| `tests/test_obliczenia.py` | logika umowna, karna, zatarcie | 44 |
 | `tests/test_deliktowa.py` | szkody / odpowiedzialność pracownicza | 23 |
 | `tests/test_validacja.py` | walidacja danych wejściowych | 21 |
 | `tests/test_podstawy.py` | spójność podstaw prawnych (stałe) | 5 |

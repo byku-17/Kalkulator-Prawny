@@ -138,7 +138,8 @@ def analiza_cywilna(
     data_umor_egzekucji: Optional[date],
     lata_baza: int,
     podstawa_prawna: str,
-    data_oceny: date
+    data_oceny: date,
+    data_klauzuli: Optional[date] = None
 ) -> WynikAnalizyCywilnej:
     """
     Analiza przedawnienia cywilnego umownego - przetwarzanie zdarzeń chronologicznie.
@@ -258,16 +259,18 @@ def analiza_cywilna(
                 )
 
         elif zdarzenie.typ == TypZdarzenia.WYROK:
-            # Wyrok zmienia reżim na 6 lat (art. 125 § 1 k.c.)
+            # Wyrok zmienia reżim na art. 125 § 1 k.c.; start terminu od klauzuli
+            # wykonalności, a gdy brak – od orzeczenia.
             wyrok_uzyskany = True
-            aktualny_start = zdarzenie.data
+            aktualny_start = data_klauzuli if data_klauzuli else zdarzenie.data
             aktualne_lata = _lata_po_wyroku(zdarzenie.data)
             aktualna_podstawa = PODSTAWA_WYROK
             # Egzekucja kończy się wyrokiem (jeśli była)
             egzekucja_w_toku = False
+            od = f"od klauzuli wykonalności {_format_data(data_klauzuli)}" if data_klauzuli else "od wyroku"
             wynik.zalozenia.append(
-                f"Wyrok {_format_data(zdarzenie.data)}: "
-                f"reżim specjalny – {aktualne_lata} lat od wyroku (art. 125 § 1 k.c.)"
+                f"Wyrok {_format_data(zdarzenie.data)}: reżim specjalny – {aktualne_lata} lat "
+                f"{od} (art. 125 § 1 k.c.)"
             )
 
         elif zdarzenie.typ == TypZdarzenia.WYSZCZ_EGZEKUCJI:
@@ -484,7 +487,8 @@ def analiza_deliktowa(
     data_wszcz_egzekucji: Optional[date],
     data_umor_egzekucji: Optional[date],
     data_oceny: date,
-    czy_szkoda_na_osobie: bool = False
+    czy_szkoda_na_osobie: bool = False,
+    data_klauzuli: Optional[date] = None
 ) -> WynikAnalizyCywilnej:
     """
     Analiza przedawnienia szkody (delikt / odpowiedzialność pracownicza).
@@ -615,12 +619,13 @@ def analiza_deliktowa(
 
         elif zdarzenie.typ == TypZdarzenia.WYROK:
             wyrok_uzyskany = True
-            aktualny_start = zdarzenie.data
+            aktualny_start = data_klauzuli if data_klauzuli else zdarzenie.data
             aktualna_podstawa = PODSTAWA_WYROK
             wyrok_lata = _lata_po_wyroku(zdarzenie.data)
             egzekucja_w_toku = False
+            od = f"od klauzuli wykonalności {_format_data(data_klauzuli)}" if data_klauzuli else "od wyroku"
             wynik.zalozenia.append(
-                f"Wyrok {_format_data(zdarzenie.data)}: reżim {wyrok_lata} lat od wyroku (art. 125 § 1 k.c.)."
+                f"Wyrok {_format_data(zdarzenie.data)}: reżim {wyrok_lata} lat {od} (art. 125 § 1 k.c.)."
             )
 
         elif zdarzenie.typ == TypZdarzenia.WYSZCZ_EGZEKUCJI:

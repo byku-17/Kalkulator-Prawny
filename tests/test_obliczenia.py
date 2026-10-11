@@ -187,6 +187,25 @@ def test_cywilna_wyrok_przed_2018_10_lat():
     assert "Art. 125" in w.podstawa_prawna
 
 
+def test_cywilna_klauzula_start_terminu():
+    """Data klauzuli wykonalności wyznacza start 6-letniego terminu (art. 125 § 1 k.c.)."""
+    wynik = analiza_cywilna(
+        data_zawarcia_umowy=date(2020, 1, 1),
+        data_wymagalnosci=date(2020, 1, 1),
+        wpłaty=[],
+        data_wyroku_cywilnego=date(2021, 1, 1),
+        data_wszcz_egzekucji=None,
+        data_umor_egzekucji=None,
+        lata_baza=3,
+        podstawa_prawna="Art. 118 k.c.",
+        data_oceny=date(2025, 1, 1),
+        data_klauzuli=date(2021, 6, 1),
+    )
+    w = wynik.wyniki[0]
+    # 6 lat od klauzuli 2021-06-01 = 2027-06-01
+    assert w.termin == date(2027, 6, 1)
+
+
 def test_cywilna_delikt_bez_reguly_konca_roku():
     """Szkoda deliktowa (art. 442¹) -> bez reguły końca roku (przez analiza_deliktowa)."""
     wynik = analiza_deliktowa(
