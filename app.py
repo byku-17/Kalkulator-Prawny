@@ -96,6 +96,7 @@ czy_umyslne = False
 
 if not czy_delikt:
     typ_odpowiedzialnosci = TypOdpowiedzialnosci.UMOWNA
+    rodzaj_zdarzenia = None
     st.info("📌 **Podstawa cywilna:** Roszczenie związane z prowadzeniem działalności gospodarczej. Co do zasady: **3 lata** (art. 118 k.c.).")
     lata_cywilne_baza = 3
     podstawa_cywilna = "Art. 118 k.c. (działalność gospodarcza)"
@@ -103,9 +104,10 @@ else:
     typ_odpowiedzialnosci = (
         TypOdpowiedzialnosci.PRACOWNICZA if czy_pracownik else TypOdpowiedzialnosci.DELIKTOWA
     )
-    st.selectbox(
+    rodzaj_zdarzenia = st.selectbox(
         "Rodzaj zdarzenia deficytowego",
-        ["Przywłaszczenie zaliczek / zbiórek", "Nieuprawnione wypłaty BLIK / z karty", "Kradzież gotówki / karty", "Fałszowanie dowodów bankowania", "Umowy fikcyjne / na słupa"]
+        ["Przywłaszczenie zaliczek / zbiórek", "Nieuprawnione wypłaty BLIK / z karty", "Kradzież gotówki / karty", "Fałszowanie dowodów bankowania", "Umowy fikcyjne / na słupa"],
+        help="Kategoria opisowa do raportu — bez wpływu na termin przedawnienia."
     )
     czy_przestepstwo = st.checkbox("Czy szkoda bezpośrednio wynika ze zbrodni lub występku (przestępstwa)?")
     czy_umyslne = st.checkbox("Czy szkoda została wyrządzona umyślnie?", help="Dotyczy odpowiedzialności pracowniczej – umyślność wpływa na zakres odpowiedzialności (art. 122 k.p.).")
@@ -309,6 +311,8 @@ if st.button("Przeprowadź analizę", type="primary"):
 
     with col_res1:
         st.subheader("📋 Wyniki analizy cywilnej")
+        if czy_delikt and rodzaj_zdarzenia:
+            st.caption(f"Rodzaj zdarzenia (opisowo, bez wpływu na termin): {rodzaj_zdarzenia}")
         if wynik_cywilny.wyniki:
             for w in wynik_cywilny.wyniki:
                 # Główna informacja
@@ -337,6 +341,11 @@ if st.button("Przeprowadź analizę", type="primary"):
         else:
             for o in wynik_cywilny.ostrzezenia:
                 st.info(o)
+
+        if wynik_cywilny.os_czasu:
+            with st.expander("🕒 Oś czasu zdarzeń"):
+                for z in wynik_cywilny.os_czasu:
+                    st.write(f"• {z.data.strftime('%d.%m.%Y')} — {z.opis}")
 
         st.subheader("⚖️ Informacje karne i KRK (orientacyjne)")
         wyniki_karne_krk = wynik_karny.wyniki + wynik_zatarcia.wyniki
