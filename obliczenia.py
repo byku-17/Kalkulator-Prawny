@@ -840,17 +840,30 @@ def analiza_zatarcia(
     lata_zatarcia: int,
     data_oceny: date,
     lata_zatarcia_wyjatek: Optional[int] = None,
-    rodzaj_kary: str = ""
+    rodzaj_kary: str = "",
+    podstawa_auto: str = "Art. 107 § 1 k.k.",
+    podstawa_wyjatek: str = "Art. 107 § 2 k.k."
 ) -> WynikAnalizyZatarcia:
     """
     Analiza zatarcia skazania (art. 107 k.k.).
 
-    - art. 107 § 1 k.k.: zatarcie z mocy prawa po 3 / 5 / 10 latach
-    - art. 107 § 4 k.k.: zatarcie w drodze wyjątku na wniosek skazanego
-      (po 5 latach od wykonania kary pozbawienia wolności)
+    Okresy z mocy prawa zależą od rodzaju kary (przekazywane jako lata_zatarcia):
+    - art. 107 § 4a k.k.: grzywna – 1 rok,
+    - art. 107 § 4 k.k.: kara ograniczenia wolności – 3 lata,
+    - art. 107 § 1 k.k.: kara pozbawienia wolności – 10 lat,
+    - art. 107 § 3 k.k.: dożywotnie pozbawienie wolności – 10 lat,
+    - art. 107 § 5 k.k.: odstąpienie od wymierzenia kary – 1 rok.
+
+    art. 107 § 2 k.k.: na wniosek skazanego sąd może zarządzić zatarcie już po
+    5 latach, jeżeli kara pozbawienia wolności nie przekraczała 3 lat
+    (przekazywane jako lata_zatarcia_wyjatek).
 
     Brak daty wykonania kary -> wynik niepewny (BRAK_DANYCH).
     NIE substytuujemy datą wyroku.
+
+    Nieobsługiwane: art. 107 § 6 k.k. (przeszkody – środek karny/przepadek/środek
+    kompensacyjny/zabezpieczający) oraz zawieszenie wykonania kary (6 miesięcy od
+    upływu okresu próby).
     """
     wynik = WynikAnalizyZatarcia()
 
@@ -881,7 +894,7 @@ def analiza_zatarcia(
 
     wynik.zalozenia.append(f"Data wykonania / darowania / zakończenia kary: {_format_data(data_wykonania)}")
 
-    # --- Zatarcie automatyczne (art. 107 § 1 k.k.) ---
+    # --- Zatarcie z mocy prawa (okres zależny od rodzaju kary) ---
     termin_automatyczny = dodaj_lata(data_wykonania, lata_zatarcia)
     if termin_automatyczny is None:
         wynik.bledy.append("Nie udało się obliczyć terminu zatarcia.")
@@ -890,53 +903,53 @@ def analiza_zatarcia(
     if termin_automatyczny < data_oceny:
         status_auto = "ZATARTE"
         kom_auto = (
-            f"Zatarcie z mocy prawa (art. 107 § 1 k.k.): nastąpiło "
+            f"Zatarcie z mocy prawa ({podstawa_auto}): nastąpiło "
             f"{_format_data(termin_automatyczny)} ({lata_zatarcia} lat od wykonania kary)."
         )
     else:
         status_auto = "W_KRK"
         kom_auto = (
-            f"Zatarcie z mocy prawa (art. 107 § 1 k.k.): skazanie pozostaje w KRK do "
+            f"Zatarcie z mocy prawa ({podstawa_auto}): skazanie pozostaje w KRK do "
             f"{_format_data(termin_automatyczny)} ({lata_zatarcia} lat od wykonania kary)."
         )
 
     wynik.wyniki.append(WynikObliczenia(
-        nazwa="Zatarcie z mocy prawa (art. 107 § 1 k.k.)",
+        nazwa=f"Zatarcie z mocy prawa ({podstawa_auto})",
         termin=termin_automatyczny,
         status=status_auto,
-        podstawa_prawna="Art. 107 § 1 k.k.",
+        podstawa_prawna=podstawa_auto,
         zalozenia=wynik.zalozenia.copy() + [f"Okres zatarcia z mocy prawa: {lata_zatarcia} lat"],
         ostrzezenia=[kom_auto],
         orientacyjny=True
     ))
 
-    # --- Zatarcie w drodze wyjątku na wniosek (art. 107 § 4 k.k.) ---
+    # --- Zatarcie na wniosek skazanego (art. 107 § 2 k.k.) ---
     if lata_zatarcia_wyjatek is not None:
         termin_wyjatek = dodaj_lata(data_wykonania, lata_zatarcia_wyjatek)
         if termin_wyjatek is not None and termin_wyjatek < termin_automatyczny:
             if termin_wyjatek < data_oceny:
                 status_wyj = "ZATARTE"
                 kom_wyj = (
-                    f"Możliwe zatarcie w drodze wyjątku (art. 107 § 4 k.k.): termin "
+                    f"Możliwe zatarcie na wniosek skazanego ({podstawa_wyjatek}): termin "
                     f"minimalny upłynął {_format_data(termin_wyjatek)} – wymaga wniosku do sądu "
                     f"i spełnienia dodatkowych przesłanek."
                 )
             else:
                 status_wyj = "MOZLIWE_WCZEŚNIEJ"
                 kom_wyj = (
-                    f"Możliwe wcześniejsze zatarcie w drodze wyjątku na wniosek (art. 107 § 4 k.k.): "
+                    f"Możliwe wcześniejsze zatarcie na wniosek skazanego ({podstawa_wyjatek}): "
                     f"od {_format_data(termin_wyjatek)}, po spełnieniu przesłanek (m.in. przestrzeganie "
                     f"porządku prawnego)."
                 )
 
             wynik.wyniki.append(WynikObliczenia(
-                nazwa="Zatarcie w drodze wyjątku na wniosek (art. 107 § 4 k.k.)",
+                nazwa=f"Zatarcie na wniosek skazanego ({podstawa_wyjatek})",
                 termin=termin_wyjatek,
                 status=status_wyj,
-                podstawa_prawna="Art. 107 § 4 k.k.",
+                podstawa_prawna=podstawa_wyjatek,
                 zalozenia=wynik.zalozenia.copy() + [
                     f"Minimalny okres do wniosku: {lata_zatarcia_wyjatek} lat od wykonania kary",
-                    "Zatarcie w drodze wyjątku następuje wyłącznie na wniosek skazanego i zależy od decyzji sądu.",
+                    "Zatarcie na wniosek następuje wyłącznie na wniosek skazanego i zależy od decyzji sądu.",
                 ],
                 ostrzezenia=[kom_wyj],
                 orientacyjny=True

@@ -472,23 +472,40 @@ def test_zatarcie_w_krk():
     assert w.termin == date(2033, 1, 1)
 
 
-def test_zatarcie_wyjatek_wczesniej():
-    """Zatarcie w drodze wyjątku (5 lat) wcześniejsze niż automatyczne (10)."""
+def test_zatarcie_na_wniosek_wczesniej():
+    """Zatarcie na wniosek (5 lat) wcześniejsze niż z mocy prawa (10) – art. 107 § 2 k.k."""
     wynik = analiza_zatarcia(
         data_wyroku_k=date(2020, 1, 1),
         data_wykonania=date(2023, 1, 1),
         lata_zatarcia=10,
         data_oceny=date(2025, 1, 1),
         lata_zatarcia_wyjatek=5,
-        rodzaj_kary="Pozbawienie wolności powyżej 3 lat"
+        rodzaj_kary="Pozbawienie wolności do 3 lat",
+        podstawa_auto="Art. 107 § 1 k.k.",
+        podstawa_wyjatek="Art. 107 § 2 k.k."
     )
-    # 2 wyniki: automatyczny (2033) i wyjątek (2028)
+    # 2 wyniki: automatyczny (2033) i na wniosek (2028)
     assert len(wynik.wyniki) == 2
     terminy = {w.termin for w in wynik.wyniki}
     assert date(2033, 1, 1) in terminy
     assert date(2028, 1, 1) in terminy
-    wyj = [w for w in wynik.wyniki if "107 § 4" in w.podstawa_prawna][0]
+    wyj = [w for w in wynik.wyniki if "107 § 2" in w.podstawa_prawna][0]
     assert wyj.status == "MOZLIWE_WCZEŚNIEJ"
+
+
+def test_zatarcie_grzywna_1_rok():
+    """Grzywna: zatarcie z mocy prawa po 1 roku (art. 107 § 4a k.k.)."""
+    wynik = analiza_zatarcia(
+        data_wyroku_k=date(2023, 1, 1),
+        data_wykonania=date(2023, 6, 1),
+        lata_zatarcia=1,
+        data_oceny=date(2025, 1, 1),
+        rodzaj_kary="Grzywna",
+        podstawa_auto="Art. 107 § 4a k.k."
+    )
+    r = wynik.wyniki[0]
+    assert r.termin == date(2024, 6, 1)
+    assert "§ 4a" in r.podstawa_prawna
 
 
 def test_zatarcie_brak_wyroku():

@@ -210,14 +210,16 @@ with col2:
     wyrok_k = st.date_input("Data wyroku karnego skazującego", value=None, min_value=MIN_DATE)
     data_wykonania_kary = st.date_input("Data wykonania / zakończenia / darowania kary (do zatarcia)", value=None, min_value=MIN_DATE, help="Od tej daty liczy się termin zatarcia. Jeśli brak – aplikacja oznaczy wynik jako niepewny (nie zastąpi datą wyroku).")
 
-    # Rodzaj kary: osobno automatyczny termin (art. 107 § 1) i ewentualny wniosek (art. 107 § 4)
+    # Rodzaj kary: termin z mocy prawa zależy od kary (art. 107 § 1, § 3, § 4, § 4a);
+    # dla kary pozbawienia wolności do 3 lat sąd może zarządzić zatarcie na wniosek po 5 latach (§ 2).
     OPCJE_ZATARCIA = {
-        "Grzywna": {"auto": 3, "wyjatek": None},
-        "Kara ograniczenia wolności": {"auto": 3, "wyjatek": None},
-        "Pozbawienie wolności do 3 lat": {"auto": 5, "wyjatek": 5},
-        "Pozbawienie wolności powyżej 3 lat": {"auto": 10, "wyjatek": 5},
+        "Grzywna": {"auto": 1, "auto_podstawa": "Art. 107 § 4a k.k.", "wyjatek": None, "wyjatek_podstawa": None},
+        "Kara ograniczenia wolności": {"auto": 3, "auto_podstawa": "Art. 107 § 4 k.k.", "wyjatek": None, "wyjatek_podstawa": None},
+        "Pozbawienie wolności do 3 lat": {"auto": 10, "auto_podstawa": "Art. 107 § 1 k.k.", "wyjatek": 5, "wyjatek_podstawa": "Art. 107 § 2 k.k."},
+        "Pozbawienie wolności powyżej 3 lat": {"auto": 10, "auto_podstawa": "Art. 107 § 1 k.k.", "wyjatek": None, "wyjatek_podstawa": None},
+        "Dożywotnie pozbawienie wolności": {"auto": 10, "auto_podstawa": "Art. 107 § 3 k.k.", "wyjatek": None, "wyjatek_podstawa": None},
     }
-    wybor_zatarcia = st.selectbox("Orzeczona kara (dla zatarcia z art. 107 k.k.)", list(OPCJE_ZATARCIA.keys()), disabled=(wyrok_k is None), help="Rodzaj kary decyduje o terminie zatarcia z mocy prawa (art. 107 § 1 k.k.).")
+    wybor_zatarcia = st.selectbox("Orzeczona kara (dla zatarcia z art. 107 k.k.)", list(OPCJE_ZATARCIA.keys()), disabled=(wyrok_k is None), help="Rodzaj kary decyduje o terminie zatarcia z mocy prawa (art. 107 k.k.).")
 
 st.divider()
 
@@ -293,7 +295,8 @@ if st.button("Przeprowadź analizę", type="primary"):
         wynik_zatarcia = analiza_zatarcia(
             wyrok_k, data_wykonania_kary,
             opcja_zat["auto"], data_oceny,
-            opcja_zat["wyjatek"], wybor_zatarcia
+            opcja_zat["wyjatek"], wybor_zatarcia,
+            opcja_zat["auto_podstawa"], opcja_zat["wyjatek_podstawa"]
         )
     else:
         wynik_zatarcia = WynikAnalizyZatarcia(
