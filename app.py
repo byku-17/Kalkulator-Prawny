@@ -19,9 +19,12 @@ st.set_page_config(page_title="Analiza prawna i windykacyjna", layout="wide")
 # BEZPIECZEŃSTWO: CORS, XSRF, HEADERS
 # ─────────────────────────────────────────────
 def configure_security_headers():
-    """Konfiguruje nagłówki bezpieczeństwa dla Streamlit."""
-    # Streamlit nie pozwala na bezpośrednią modyfikację nagłówków HTTP,
-    # ale możemy dodać meta tagi przez st.markdown
+    """Dokleja meta tagi bezpieczeństwa (best-effort).
+
+    Streamlit nie pozwala na ustawianie nagłówków HTTP z poziomu aplikacji —
+    meta tagi nie zastępują X-Frame-Options/CSP z reverse proxy.
+    W szczególności X-Frame-Options w <meta> jest ignorowane przez przeglądarki.
+    """
     st.markdown("""
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
     <meta http-equiv="X-Content-Type-Options" content="nosniff">
