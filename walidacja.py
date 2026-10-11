@@ -56,7 +56,7 @@ def waliduj_dane(
                     f"🔴 Wpłata {w.strftime('%d.%m.%Y')} nie może być wcześniejsza niż data zdarzenia / dowiedzenia się o szkodzie."
                 )
 
-        for d, nazwa in [(data_wyroku_cywilnego, "Wyrok cywilny"), (data_wszcz_egzekucji, "Egzekucja")]:
+        for d, nazwa in [(data_wyroku_cywilnego, "Wyrok cywilny"), (data_wszcz_egzekucji, "Egzekucja"), (data_umor_egzekucji, "Umorzenie egzekucji")]:
             if d and data_zdarzenia and d < data_zdarzenia:
                 bledy.append(f"🔴 {nazwa} nie może być wcześniejszy/a niż data zdarzenia wywołującego szkodę.")
 
