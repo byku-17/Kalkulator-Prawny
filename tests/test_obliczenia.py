@@ -1,9 +1,4 @@
-import sys
-from pathlib import Path
 from datetime import date
-
-# Dodaj katalog główny do ścieżki
-sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from obliczenia import (
     dodaj_lata,
