@@ -24,7 +24,7 @@ Legenda statusu:
 | art. 125 § 1 k.c. | wyrok: 6 lat (10 lat, gdy orzeczenie przed 09.07.2018) | `_lata_po_wyroku` | ✅ zweryfikowany |
 | art. 442¹ § 1 k.c. | 3 lata od dowiedzenia + bezwzględny limit 10 lat | `_oblicz_termin_deliktowy` | ✅ zweryfikowany (Dz.U.2026.795) |
 | art. 442¹ § 2 k.c. | 20 lat od popełnienia czynu | `_oblicz_termin_deliktowy` | ✅ zweryfikowany |
-| art. 442¹ § 3 k.c. | szkoda na osobie (min. 3 lata) | — | ⛔ nieobsługiwany |
+| art. 442¹ § 3 k.c. | szkoda na osobie: min. 3 lata od dowiedzenia (znosi limit 10 lat) | `_oblicz_termin_deliktowy` | ✅ zweryfikowany (Dz.U.2026.795) |
 | art. 442¹ § 4 k.c. | małoletni | — | ⛔ nieobsługiwany |
 | art. 121 k.c. | zawieszenie biegu (siła wyższa itd.) | — | ⛔ nieobsługiwany |
 | art. 5 ustawy z 13.04.2018 (Dz.U. 2018 poz. 1104) | przepisy przejściowe: nowe przepisy dla roszczeń nieprzedawnionych na 09.07.2018 (ust. 1); dawne – tylko dla przedawnionych przed tą datą | `_czy_stara_przedawnienie` | ✅ zweryfikowany |

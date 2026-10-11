@@ -17,6 +17,7 @@ def _wywolaj(
     data_wszcz_egzekucji=None,
     data_umor_egzekucji=None,
     data_oceny=date(2025, 1, 1),
+    czy_szkoda_na_osobie=False,
 ):
     return analiza_deliktowa(
         data_zdarzenia=data_zdarzenia,
@@ -29,6 +30,7 @@ def _wywolaj(
         data_wszcz_egzekucji=data_wszcz_egzekucji,
         data_umor_egzekucji=data_umor_egzekucji,
         data_oceny=data_oceny,
+        czy_szkoda_na_osobie=czy_szkoda_na_osobie,
     )
 
 
@@ -70,6 +72,16 @@ def test_delikt_brak_konca_roku():
     r = w.wyniki[0]
     assert r.termin == date(2023, 3, 15)  # dokładnie 3 lata, nie 31.12
     assert any("bez reguły końca roku" in o for o in r.ostrzezenia)
+
+
+def test_delikt_szkoda_na_osobie_znosi_limit_10_lat():
+    """Szkoda na osobie: min. 3 lata od dowiedzenia, limit 10 lat zniesiony (art. 442¹ § 3 k.c.)."""
+    # zdarzenie 2010, dowiedzenie 2019 -> normalnie cap 10 lat = 2020-01-01,
+    # ale § 3 daje 3 lata od dowiedzenia = 2022-01-01
+    w = _wywolaj(date(2010, 1, 1), date(2019, 1, 1), czy_szkoda_na_osobie=True, data_oceny=date(2025, 1, 1))
+    r = w.wyniki[0]
+    assert r.termin == date(2022, 1, 1)
+    assert "§ 3" in r.podstawa_prawna
 
 
 def test_delikt_brak_daty_zdarzenia():

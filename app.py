@@ -117,6 +117,7 @@ else:
     )
     czy_przestepstwo = st.checkbox("Czy szkoda bezpośrednio wynika ze zbrodni lub występku (przestępstwa)?")
     czy_umyslne = st.checkbox("Czy szkoda została wyrządzona umyślnie?", help="Dotyczy odpowiedzialności pracowniczej – przy szkodzie umyślnej stosuje się przepisy k.c. (art. 291 § 3 k.p.), nie zaś 1-roczny termin z art. 291 § 2 k.p.")
+    czy_szkoda_na_osobie = st.checkbox("Czy szkoda jest szkodą na osobie?", help="Art. 442¹ § 3 k.c. – przy szkodzie na osobie przedawnienie nie może skończyć się wcześniej niż 3 lata od dowiedzenia się o szkodzie i osobie obowiązanej (znosi 10-letni limit z § 1).")
 
     if czy_pracownik:
         st.info(
@@ -267,7 +268,7 @@ if st.button("Przeprowadź analizę", type="primary"):
                 data_zdarzenia, data_dowiedzenia, czy_przestepstwo, czy_umyslne,
                 typ_odpowiedzialnosci, wpłaty,
                 data_wyroku_cywilnego, data_wszcz_egzekucji, data_umor_egzekucji,
-                data_oceny
+                data_oceny, czy_szkoda_na_osobie
             )
         else:
             wynik_cywilny = WynikAnalizyCywilnej(

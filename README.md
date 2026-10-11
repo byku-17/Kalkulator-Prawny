@@ -56,6 +56,7 @@ obliczeniową oddzieloną od interfejsu i pokrytą testami jednostkowymi.
 | Zagadnienie | Podstawa | Zastosowana reguła |
 |---|---|---|
 | Szkoda bez kwalifikacji karnej | art. 442¹ § 1 k.c. | 3 lata od dowiedzenia się, max 10 lat od zdarzenia |
+| Szkoda na osobie | art. 442¹ § 3 k.c. | min. 3 lata od dowiedzenia się (znosi limit 10 lat) |
 | Szkoda z przestępstwa | art. 442¹ § 2 k.c. | 20 lat od popełnienia czynu; podlega przerwaniu (art. 123 k.c.) |
 | Odpowiedzialność pracownicza (nieumyślna) | art. 291 § 2 k.p. | 1 rok od powzięcia wiadomości, max 3 lata od wyrządzenia |
 | Odpowiedzialność pracownicza (umyślna) | art. 291 § 3 k.p. | przepisy k.c. (art. 442¹ § 1 k.c.: 3 lata, max 10 lat) |
@@ -65,7 +66,7 @@ obliczeniową oddzieloną od interfejsu i pokrytą testami jednostkowymi.
 |---|---|---|
 | Ustawowe przedawnienie karalności | art. 101 § 1 k.k. | termin zależny od kwalifikacji czynu |
 | Karalność – oskarżenie prywatne | art. 101 § 2 k.k. | 1 rok od dowiedzenia się o sprawcy, max 3 lata od czynu |
-| Przedłużenie karalności | art. 102 k.k. | +10 lat, jeżeli wszczęto postępowanie przeciwko osobie w terminie |
+| Przedłużenie karalności | art. 102 § 1 k.k. | +10 lat (art. 101 § 1) lub +5 lat (oskarżenie prywatne), jeżeli wszczęto postępowanie w terminie |
 | Zatarcie z mocy prawa | art. 107 § 1, § 3, § 4, § 4a k.k. | grzywna 1 rok; ograniczenie wolności 3 lata; pozbawienie wolności 10 lat |
 | Zatarcie na wniosek skazanego | art. 107 § 2 k.k. | po 5 latach, gdy kara pozbawienia wolności ≤ 3 lat |
 
@@ -79,6 +80,7 @@ Aplikacja **jawnie zgłasza** przypadki, których nie obsługuje, zamiast podawa
 niepewne terminy jako pewne:
 
 - Przepisy szczególne przewidujące odrębne terminy przedawnienia.
+- art. 442¹ § 4 k.c. (szkoda na osobie małoletniego – nie wcześniej niż 2 lata od pełnoletności).
 - Przedłużenie karalności, gdy nie podano daty wszczęcia postępowania przeciwko osobie.
 - Karalność przy oskarżeniu prywatnym bez daty dowiedzenia się o osobie sprawcy
   (status „dane niewystarczające”).
@@ -164,11 +166,11 @@ Zakres testów:
 | Plik | Zakres | Liczba |
 |---|---|---|
 | `tests/test_obliczenia.py` | logika umowna, karna, zatarcie | 40 |
-| `tests/test_deliktowa.py` | szkody / odpowiedzialność pracownicza | 22 |
+| `tests/test_deliktowa.py` | szkody / odpowiedzialność pracownicza | 23 |
 | `tests/test_validacja.py` | walidacja danych wejściowych | 21 |
 | `tests/test_podstawy.py` | spójność podstaw prawnych (stałe) | 5 |
 | `tests/test_app_smoke.py` | dymny test interfejsu (AppTest) | 4 |
-| **Razem** | | **92** |
+| **Razem** | | **93** |
 
 Lint kodu (Ruff):
 
