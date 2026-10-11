@@ -69,6 +69,8 @@ obliczeniową oddzieloną od interfejsu i pokrytą testami jednostkowymi.
 | Zatarcie z mocy prawa | art. 107 § 1, § 3, § 4, § 4a k.k. | grzywna 1 rok; ograniczenie wolności 3 lata; pozbawienie wolności 10 lat |
 | Zatarcie na wniosek skazanego | art. 107 § 2 k.k. | po 5 latach, gdy kara pozbawienia wolności ≤ 3 lat |
 
+> Rejestr wszystkich stosowanych przepisów i status ich weryfikacji: [`docs/przepisy.md`](docs/przepisy.md).
+
 ---
 
 ## Ograniczenia i przypadki nieobsługiwane
@@ -187,6 +189,7 @@ ruff check .
 ├── pytest.ini                      # Konfiguracja pytest
 ├── ruff.toml                       # Konfiguracja lintera Ruff
 ├── README.md                       # Dokumentacja
+├── docs/przepisy.md                # Rejestr przepisów i status weryfikacji
 ├── .gitignore
 ├── .github/workflows/tests.yml     # CI – automatyczne testy
 ├── .streamlit/secrets.toml         # Sekrety (nie w git)
