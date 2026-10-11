@@ -85,6 +85,7 @@ st.warning(
 )
 
 MIN_DATE = date(2000, 1, 1)
+MAX_DATE = date.today()
 
 OPCJE_KK = {
     "Oszustwo (art. 286 § 1 k.k.) – zagrożenie do 8 lat": 15,
@@ -174,12 +175,12 @@ wybor_wykonania = None
 
 if jest_klient:
     st.subheader("Roszczenie z umowy")
-    data_zawarcia_umowy = st.date_input("Data zawarcia umowy", value=None, min_value=MIN_DATE)
-    data_wymagalnosci = st.date_input("Data wymagalności (pierwsza zaległa rata)", value=None, min_value=MIN_DATE)
+    data_zawarcia_umowy = st.date_input("Data zawarcia umowy", value=None, min_value=MIN_DATE, max_value=MAX_DATE)
+    data_wymagalnosci = st.date_input("Data wymagalności (pierwsza zaległa rata)", value=None, min_value=MIN_DATE, max_value=MAX_DATE)
 else:
     st.subheader("Szkoda (deficyt)")
-    data_zdarzenia = st.date_input("Data zdarzenia (wyrządzenia szkody)", value=None, min_value=MIN_DATE)
-    data_dowiedzenia = st.date_input("Data dowiedzenia się o szkodzie i osobie", value=None, min_value=MIN_DATE)
+    data_zdarzenia = st.date_input("Data zdarzenia (wyrządzenia szkody)", value=None, min_value=MIN_DATE, max_value=MAX_DATE)
+    data_dowiedzenia = st.date_input("Data dowiedzenia się o szkodzie i osobie", value=None, min_value=MIN_DATE, max_value=MAX_DATE)
     czy_przestepstwo = st.checkbox("Czy szkoda wynika z przestępstwa (zbrodni lub występku)?")
     if jest_pracownik:
         czy_umyslne = st.checkbox("Czy szkoda wyrządzona umyślnie?")
@@ -194,38 +195,43 @@ for linia in wpłaty_input.strip().split("\n"):
     linia = linia.strip()
     if linia:
         try:
-            wpłaty.append(date.fromisoformat(linia))
+            d = date.fromisoformat(linia)
         except ValueError:
-            bledne_wplaty.append(linia)
+            bledne_wplaty.append(f"{linia} (zły format)")
+            continue
+        if d > MAX_DATE:
+            bledne_wplaty.append(f"{linia} (data z przyszłości)")
+            continue
+        wpłaty.append(d)
 if bledne_wplaty:
-    st.warning("Nie rozpoznano daty (oczekiwano RRRR-MM-DD): " + ", ".join(bledne_wplaty))
+    st.warning("Pominięto wpłaty (oczekiwano RRRR-MM-DD, bez dat z przyszłości): " + ", ".join(bledne_wplaty))
 
 if etap_cywilny:
     data_wyroku_cywilnego = st.date_input(
-        "Data prawomocnego wyroku / nakazu cywilnego", value=None, min_value=MIN_DATE,
+        "Data prawomocnego wyroku / nakazu cywilnego", value=None, min_value=MIN_DATE, max_value=MAX_DATE,
         help="Roszczenie stwierdzone orzeczeniem przedawnia się z upływem 6 lat (10 lat, gdy orzeczenie przed 09.07.2018) – art. 125 § 1 k.c.",
     )
     data_klauzuli = st.date_input(
-        "Data klauzuli wykonalności (start terminu, art. 125 § 1 k.c.)", value=None, min_value=MIN_DATE,
+        "Data klauzuli wykonalności (start terminu, art. 125 § 1 k.c.)", value=None, min_value=MIN_DATE, max_value=MAX_DATE,
         help="Jeśli brak – termin liczony od daty orzeczenia.",
     )
 
 if etap_egzekucja:
-    data_wszcz_egzekucji = st.date_input("Data wszczęcia egzekucji", value=None, min_value=MIN_DATE)
-    data_umor_egzekucji = st.date_input("Data umorzenia egzekucji (jeśli było)", value=None, min_value=MIN_DATE)
+    data_wszcz_egzekucji = st.date_input("Data wszczęcia egzekucji", value=None, min_value=MIN_DATE, max_value=MAX_DATE)
+    data_umor_egzekucji = st.date_input("Data umorzenia egzekucji (jeśli było)", value=None, min_value=MIN_DATE, max_value=MAX_DATE)
 
 if etap_karny:
     st.subheader("Postępowanie karne")
-    data_czynu = st.date_input("Data popełnienia czynu", value=None, min_value=MIN_DATE)
+    data_czynu = st.date_input("Data popełnienia czynu", value=None, min_value=MIN_DATE, max_value=MAX_DATE)
     kwalifikacje = st.multiselect(
         "Kwalifikacje czynów (można wybrać kilka – sprawy wielowątkowe)",
         list(OPCJE_KK.keys()),
     )
-    wszczecie_k = st.date_input("Data wszczęcia postępowania karnego", value=None, min_value=MIN_DATE)
-    umorzenie_k = st.date_input("Data umorzenia postępowania karnego", value=None, min_value=MIN_DATE)
+    wszczecie_k = st.date_input("Data wszczęcia postępowania karnego", value=None, min_value=MIN_DATE, max_value=MAX_DATE)
+    umorzenie_k = st.date_input("Data umorzenia postępowania karnego", value=None, min_value=MIN_DATE, max_value=MAX_DATE)
 
 if etap_zatarcie or etap_karny:
-    wyrok_k = st.date_input("Data wyroku karnego skazującego", value=None, min_value=MIN_DATE)
+    wyrok_k = st.date_input("Data wyroku karnego skazującego", value=None, min_value=MIN_DATE, max_value=MAX_DATE)
 
 if wyrok_k is not None:
     wybor_wykonania = st.selectbox(
@@ -234,7 +240,7 @@ if wyrok_k is not None:
     )
 
 if etap_zatarcie:
-    data_wykonania_kary = st.date_input("Data wykonania / darowania kary", value=None, min_value=MIN_DATE)
+    data_wykonania_kary = st.date_input("Data wykonania / darowania kary", value=None, min_value=MIN_DATE, max_value=MAX_DATE)
     wybor_zatarcia = st.selectbox(
         "Orzeczona kara (dla zatarcia, art. 107 k.k.)",
         list(OPCJE_ZATARCIA.keys()),

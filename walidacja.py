@@ -17,7 +17,8 @@ def waliduj_dane(
     wyrok_k: Optional[date],
     data_wykonania_kary: Optional[date],
     czy_delikt: bool,
-    data_dowiedzenia_o_sprawcy: Optional[date] = None
+    data_dowiedzenia_o_sprawcy: Optional[date] = None,
+    data_oceny: Optional[date] = None
 ) -> tuple[list[str], list[str]]:
     """
     Waliduje spójność danych wejściowych kalkulatora.
@@ -101,5 +102,34 @@ def waliduj_dane(
 
     if data_wyroku_cywilnego and data_umor_egzekucji and data_umor_egzekucji < data_wyroku_cywilnego:
         ostrzezenia.append("⚠️ Umorzenie egzekucji jest wcześniejsze niż wyrok cywilny. Sprawdź daty.")
+
+    # Daty z przyszłości nie są obsługiwane
+    if data_oceny is None:
+        data_oceny = date.today()
+    daty_do_sprawdzenia = [
+        (data_zawarcia_umowy, "Data zawarcia umowy"),
+        (data_wymagalnosci, "Data wymagalności"),
+        (data_zdarzenia, "Data zdarzenia"),
+        (data_dowiedzenia, "Data dowiedzenia się"),
+        (data_wyroku_cywilnego, "Data wyroku cywilnego"),
+        (data_wszcz_egzekucji, "Data wszczęcia egzekucji"),
+        (data_umor_egzekucji, "Data umorzenia egzekucji"),
+        (data_czynu, "Data czynu"),
+        (wszczecie_k, "Data wszczęcia postępowania karnego"),
+        (umorzenie_k, "Data umorzenia postępowania karnego"),
+        (wyrok_k, "Data wyroku karnego"),
+        (data_wykonania_kary, "Data wykonania kary"),
+        (data_dowiedzenia_o_sprawcy, "Data dowiedzenia się o sprawcy"),
+    ]
+    for d, nazwa in daty_do_sprawdzenia:
+        if d is not None and d > data_oceny:
+            ostrzezenia.append(
+                f"⚠️ {nazwa} ({d.strftime('%d.%m.%Y')}) jest z przyszłości i nie jest obsługiwana."
+            )
+    for w in wpłaty:
+        if w > data_oceny:
+            ostrzezenia.append(
+                f"⚠️ Wpłata {w.strftime('%d.%m.%Y')} jest z przyszłości i nie jest obsługiwana."
+            )
 
     return bledy, ostrzezenia

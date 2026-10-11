@@ -453,6 +453,28 @@ def test_oskarzenie_prywatne_dowiedzenie_przed_czynem():
     assert any("osobie sprawcy" in b for b in bledy)
 
 
+def test_ostrzezenie_data_z_przyszlosci():
+    """Data z przyszłości -> ostrzeżenie, że nie jest obsługiwana."""
+    _, ostrzezenia = waliduj_dane(
+        data_zawarcia_umowy=None,
+        data_wymagalnosci=None,
+        data_zdarzenia=None,
+        data_dowiedzenia=None,
+        wpłaty=[],
+        data_wyroku_cywilnego=None,
+        data_wszcz_egzekucji=None,
+        data_umor_egzekucji=None,
+        data_czynu=date(2999, 1, 1),
+        wszczecie_k=None,
+        umorzenie_k=None,
+        wyrok_k=None,
+        data_wykonania_kary=None,
+        czy_delikt=False,
+        data_oceny=date(2025, 1, 1)
+    )
+    assert any("z przyszłości" in o for o in ostrzezenia)
+
+
 if __name__ == "__main__":
     import pytest
     pytest.main([__file__, "-v"])

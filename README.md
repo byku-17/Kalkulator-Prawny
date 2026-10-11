@@ -177,10 +177,10 @@ Zakres testów:
 |---|---|---|
 | `tests/test_obliczenia.py` | logika umowna, karna, zatarcie | 44 |
 | `tests/test_deliktowa.py` | szkody / odpowiedzialność pracownicza | 22 |
-| `tests/test_validacja.py` | walidacja danych wejściowych | 21 |
+| `tests/test_validacja.py` | walidacja danych wejściowych | 22 |
 | `tests/test_podstawy.py` | spójność podstaw prawnych (stałe) | 5 |
 | `tests/test_app_smoke.py` | dymny test interfejsu (AppTest) | 4 |
-| **Razem** | | **96** |
+| **Razem** | | **97** |
 
 Lint kodu (Ruff):
 
