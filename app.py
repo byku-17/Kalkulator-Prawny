@@ -183,8 +183,8 @@ with col1:
     data_wyroku_cywilnego = st.date_input("Data prawomocnego wyroku cywilnego / nakazu", value=None, min_value=MIN_DATE, help="Prawomocne orzeczenie sądu wyznacza odrębny reżim przedawnienia (6 lat od wyroku – art. 125 k.c.).")
 
     st.markdown("---")
-    data_wszcz_egzekucji = st.date_input("Data wszczęcia egzekucji", value=None, min_value=MIN_DATE, help="Data złożenia wniosku egzekucyjnego u komornika (zawiesza bieg przedawnienia – art. 124 k.c.).")
-    data_umor_egzekucji = st.date_input("Data prawomocnego umorzenia egzekucji", value=None, min_value=MIN_DATE, help="Data uprawomocnienia się postanowienia komornika o umorzeniu (bieg od nowa – art. 124 § 2 k.c.).")
+    data_wszcz_egzekucji = st.date_input("Data wszczęcia egzekucji", value=None, min_value=MIN_DATE, help="Data złożenia wniosku egzekucyjnego u komornika – wszczęcie egzekucji przerywa bieg (art. 123 § 1 pkt 1 k.c.), a przedawnienie nie biegnie na nowo do zakończenia postępowania (art. 124 § 2 k.c.).")
+    data_umor_egzekucji = st.date_input("Data prawomocnego umorzenia egzekucji", value=None, min_value=MIN_DATE, help="Data uprawomocnienia się postanowienia komornika o umorzeniu – zakończenie postępowania, od którego przedawnienie biegnie na nowo (art. 124 § 1 k.c.).")
 
 with col2:
     st.subheader("Sfera karna i zatarcie (orientacyjnie)")

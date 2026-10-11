@@ -9,8 +9,8 @@ class TypZdarzenia(Enum):
     """Typ zdarzenia wpływającego na bieg przedawnienia."""
     START = "start"                    # początek biegu (wymagalność)
     WPLATA = "wplata"                  # wpłata / uznanie długu (art. 123 k.c.)
-    WYSZCZ_EGZEKUCJI = "wyszcz_egzekucji"  # wszczęcie egzekucji (art. 124 k.c.)
-    UMORZENIE_EGZEKUCJI = "umorzenie_egzekucji"  # umorzenie egzekucji (art. 124 § 2 k.c.)
+    WYSZCZ_EGZEKUCJI = "wyszcz_egzekucji"  # wszczęcie egzekucji – przerwanie (art. 123 § 1 pkt 1 k.c.)
+    UMORZENIE_EGZEKUCJI = "umorzenie_egzekucji"  # umorzenie egzekucji – bieg od nowa (art. 124 § 1 k.c.)
     WYROK = "wyrok"                    # prawomocny wyrok (art. 125 k.c.)
 
 
@@ -138,8 +138,9 @@ def analiza_cywilna(
     Zasady:
     - art. 118 k.c.: 3 lata od wymagalności (działalność gospodarcza)
     - art. 123 k.c.: uznanie długu (wpłata) -> bieg od nowa od daty uznania
-    - art. 124 k.c.: wszczęcie egzekucji -> zawieszenie biegu do umorzenia
-    - art. 124 § 2 k.c.: umorzenie egzekucji -> bieg od nowa od umorzenia
+    - art. 123 § 1 pkt 1 k.c.: wszczęcie egzekucji -> przerwanie biegu
+    - art. 124 § 2 k.c.: przedawnienie nie biegnie na nowo do zakończenia postępowania
+    - art. 124 § 1 k.c.: po zakończeniu (umorzeniu) egzekucji -> bieg od nowa
     - art. 125 k.c.: wyrok -> 6 lat od wyroku (reżim specjalny)
     - przepisy przejściowe 2018: umowy przed 09.07.2018 = bez końca roku
     """
@@ -231,10 +232,10 @@ def analiza_cywilna(
                     f"nie przesądza o przedawnieniu (art. 125 k.c. – reżim 6 lat od wyroku)."
                 )
             elif egzekucja_w_toku:
-                # W trakcie egzekucji wpłata nie ma wpływu na bieg (zawieszenie)
+                # W trakcie egzekucji wpłata nie ma wpływu na bieg (art. 124 § 2 k.c.)
                 wynik.zalozenia.append(
                     f"Wpłata {_format_data(zdarzenie.data)} w trakcie egzekucji: "
-                    f"bieg przedawnienia zawieszony (art. 124 k.c.)."
+                    f"bieg przedawnienia nie biegnie na nowo (art. 124 § 2 k.c.)."
                 )
             else:
                 # Uznanie długu przed wyrokiem i poza egzekucją -> nowy bieg (art. 123 k.c.)
@@ -268,23 +269,24 @@ def analiza_cywilna(
                     f"nie wpływa na przedawnienie cywilne (reżim art. 125 k.c.)."
                 )
             else:
-                # Egzekucja przed wyrokiem – zawieszenie biegu (art. 124 k.c.)
+                # Egzekucja przed wyrokiem – przerwanie biegu (art. 123 § 1 pkt 1 k.c.)
                 egzekucja_w_toku = True
                 wynik.zalozenia.append(
                     f"Wszczęcie egzekucji {_format_data(zdarzenie.data)}: "
-                    f"zawieszenie biegu przedawnienia (art. 124 § 1 k.c.)"
+                    f"przerwanie biegu; przedawnienie nie biegnie na nowo do zakończenia "
+                    f"postępowania (art. 123 § 1 pkt 1 i art. 124 § 2 k.c.)"
                 )
 
         elif zdarzenie.typ == TypZdarzenia.UMORZENIE_EGZEKUCJI:
             if egzekucja_w_toku:
-                # Umorzenie egzekucji przed wyrokiem -> bieg od nowa (art. 124 § 2 k.c.)
+                # Umorzenie egzekucji przed wyrokiem -> bieg od nowa (art. 124 § 1 k.c.)
                 egzekucja_w_toku = False
                 aktualny_start = zdarzenie.data
                 aktualne_lata = lata_baza
                 aktualna_podstawa = podstawa_prawna
                 wynik.zalozenia.append(
                     f"Umorzenie egzekucji {_format_data(zdarzenie.data)}: "
-                    f"bieg przedawnienia od nowa (art. 124 § 2 k.c.), "
+                    f"koniec postępowania – bieg przedawnienia od nowa (art. 124 § 1 k.c.), "
                     f"{aktualne_lata} lat od umorzenia, podstawa: {aktualna_podstawa}"
                 )
             else:
@@ -308,7 +310,7 @@ def analiza_cywilna(
             status="W_TOKU",
             podstawa_prawna="Art. 124 § 2 k.c.",
             zalozenia=[f"Wszczęcie egzekucji: {_format_data(data_wszcz_egzekucji)}", "Brak umorzenia – postępowanie trwa"],
-            ostrzezenia=["Przedawnienie zawieszone do prawomocnego zakończenia egzekucji."],
+            ostrzezenia=["Przedawnienie nie biegnie na nowo do prawomocnego zakończenia egzekucji (art. 124 § 2 k.c.)."],
             orientacyjny=True
         ))
         return wynik
@@ -573,7 +575,7 @@ def analiza_deliktowa(
             elif egzekucja_w_toku:
                 wynik.zalozenia.append(
                     f"Wpłata {_format_data(zdarzenie.data)} w trakcie egzekucji: "
-                    f"bieg przedawnienia zawieszony (art. 124 k.c.)."
+                    f"bieg przedawnienia nie biegnie na nowo (art. 124 § 2 k.c.)."
                 )
             else:
                 aktualny_start = zdarzenie.data
@@ -602,7 +604,8 @@ def analiza_deliktowa(
                 egzekucja_w_toku = True
                 wynik.zalozenia.append(
                     f"Wszczęcie egzekucji {_format_data(zdarzenie.data)}: "
-                    f"zawieszenie biegu przedawnienia (art. 124 § 1 k.c.)."
+                    f"przerwanie biegu; przedawnienie nie biegnie na nowo do zakończenia "
+                    f"postępowania (art. 123 § 1 pkt 1 i art. 124 § 2 k.c.)."
                 )
 
         elif zdarzenie.typ == TypZdarzenia.UMORZENIE_EGZEKUCJI:
@@ -612,7 +615,7 @@ def analiza_deliktowa(
                 aktualna_podstawa = podstawa
                 wynik.zalozenia.append(
                     f"Umorzenie egzekucji {_format_data(zdarzenie.data)}: "
-                    f"bieg przedawnienia od nowa (art. 124 § 2 k.c.)."
+                    f"koniec postępowania – bieg przedawnienia od nowa (art. 124 § 1 k.c.)."
                 )
             elif wyrok_uzyskany:
                 wynik.zalozenia.append(
@@ -633,7 +636,7 @@ def analiza_deliktowa(
             status="W_TOKU",
             podstawa_prawna="Art. 124 § 2 k.c.",
             zalozenia=[f"Wszczęcie egzekucji: {_format_data(data_wszcz_egzekucji)}", "Brak umorzenia – postępowanie trwa"],
-            ostrzezenia=["Przedawnienie zawieszone do prawomocnego zakończenia egzekucji."],
+            ostrzezenia=["Przedawnienie nie biegnie na nowo do prawomocnego zakończenia egzekucji (art. 124 § 2 k.c.)."],
             orientacyjny=True
         ))
         return wynik
