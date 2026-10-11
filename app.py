@@ -116,12 +116,13 @@ else:
         help="Kategoria opisowa do raportu — bez wpływu na termin przedawnienia."
     )
     czy_przestepstwo = st.checkbox("Czy szkoda bezpośrednio wynika ze zbrodni lub występku (przestępstwa)?")
-    czy_umyslne = st.checkbox("Czy szkoda została wyrządzona umyślnie?", help="Dotyczy odpowiedzialności pracowniczej – umyślność wpływa na zakres odpowiedzialności (art. 122 k.p.).")
+    czy_umyslne = st.checkbox("Czy szkoda została wyrządzona umyślnie?", help="Dotyczy odpowiedzialności pracowniczej – przy szkodzie umyślnej stosuje się przepisy k.c. (art. 291 § 3 k.p.), nie zaś 1-roczny termin z art. 291 § 2 k.p.")
 
     if czy_pracownik:
         st.info(
             f"📌 **Reżim pracowniczy:** {PODSTAWA_PRACOWNICZA}. Odpowiedzialność materialna "
-            "pracownika – co do zasady **3 lata** od dowiedzenia się o szkodzie i sprawcy."
+            "pracownika (nieumyślna) – **1 rok** od powzięcia wiadomości o szkodzie, "
+            "nie później niż **3 lata** od jej wyrządzenia."
         )
 
     if czy_przestepstwo:

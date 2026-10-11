@@ -57,8 +57,8 @@ obliczeniową oddzieloną od interfejsu i pokrytą testami jednostkowymi.
 |---|---|---|
 | Szkoda bez kwalifikacji karnej | art. 442¹ § 1 k.c. | 3 lata od dowiedzenia się, max 10 lat od zdarzenia |
 | Szkoda z przestępstwa | art. 442¹ § 2 k.c. | 20 lat od popełnienia czynu (bezwzględny limit – reset go nie wydłuża) |
-| Odpowiedzialność pracownicza | art. 291 § 1 k.p. | 3 lata od dowiedzenia się o szkodzie i sprawcy |
-| Umyślność szkody pracownika | art. 122 k.p. | ostrzeżenie o pełnym zakresie odpowiedzialności |
+| Odpowiedzialność pracownicza (nieumyślna) | art. 291 § 2 k.p. | 1 rok od powzięcia wiadomości, max 3 lata od wyrządzenia |
+| Odpowiedzialność pracownicza (umyślna) | art. 291 § 3 k.p. | przepisy k.c. (art. 442¹ § 1 k.c.: 3 lata, max 10 lat) |
 
 ### Część karna
 | Zagadnienie | Podstawa | Zastosowana reguła |
@@ -158,11 +158,11 @@ Zakres testów:
 | Plik | Zakres | Liczba |
 |---|---|---|
 | `tests/test_obliczenia.py` | logika umowna, karna, zatarcie | 35 |
-| `tests/test_deliktowa.py` | szkody / odpowiedzialność pracownicza | 19 |
+| `tests/test_deliktowa.py` | szkody / odpowiedzialność pracownicza | 21 |
 | `tests/test_validacja.py` | walidacja danych wejściowych | 21 |
 | `tests/test_podstawy.py` | spójność podstaw prawnych (stałe) | 5 |
 | `tests/test_app_smoke.py` | dymny test interfejsu (AppTest) | 4 |
-| **Razem** | | **84** |
+| **Razem** | | **86** |
 
 Lint kodu (Ruff):
 

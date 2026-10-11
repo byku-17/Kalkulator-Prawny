@@ -109,15 +109,38 @@ def test_przestepstwo_nie_wymaga_daty_dowiedzenia():
 # ─────────────────────────────────────────────
 # Odpowiedzialność pracownicza (art. 291 k.p.)
 # ─────────────────────────────────────────────
-def test_pracownik_3_lata_od_dowiedzenia():
-    """Pracownik: 3 lata od dowiedzenia się."""
+def test_pracownik_1_rok_od_dowiedzenia():
+    """Pracownik nieumyślny: 1 rok od powzięcia wiadomości (art. 291 § 2 k.p.)."""
     w = _wywolaj(
         date(2023, 1, 1), date(2023, 6, 1),
         typ=TypOdpowiedzialnosci.PRACOWNICZA, data_oceny=date(2025, 1, 1)
     )
     r = w.wyniki[0]
     assert "291" in r.podstawa_prawna
-    assert r.termin == date(2026, 6, 1)
+    # 1 rok od 2023-06-01 = 2024-06-01 (limit 3 lat od zdarzenia nieaktywny)
+    assert r.termin == date(2024, 6, 1)
+
+
+def test_pracownik_limit_3_lat_od_wyrzadzenia():
+    """Pracownik nieumyślny: limit 3 lat od wyrządzenia wygrywa z 1 rokiem."""
+    w = _wywolaj(
+        date(2018, 1, 1), date(2020, 6, 1),
+        typ=TypOdpowiedzialnosci.PRACOWNICZA, data_oceny=date(2025, 1, 1)
+    )
+    r = w.wyniki[0]
+    # 1 rok od 2020-06-01 = 2021-06-01; 3 lata od 2018-01-01 = 2021-01-01 -> wygrywa 2021-01-01
+    assert r.termin == date(2021, 1, 1)
+
+
+def test_pracownik_umyslny_przepisy_kc():
+    """Pracownik umyślny: przepisy k.c. (art. 291 § 3) – 3 lata od dowiedzenia."""
+    w = _wywolaj(
+        date(2020, 1, 1), date(2020, 6, 1),
+        czy_umyslne=True, typ=TypOdpowiedzialnosci.PRACOWNICZA, data_oceny=date(2025, 1, 1)
+    )
+    r = w.wyniki[0]
+    assert "291 § 3" in r.podstawa_prawna
+    assert r.termin == date(2023, 6, 1)
 
 
 def test_pracownik_umyslne_ostrzezenie():

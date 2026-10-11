@@ -26,7 +26,8 @@ class TypOdpowiedzialnosci(Enum):
 # ─────────────────────────────────────────────
 LATA_UMOWNE = 3
 PODSTAWA_UMOWNA = "Art. 118 k.c. (działalność gospodarcza)"
-PODSTAWA_PRACOWNICZA = "Art. 291 § 1 k.p. w zw. z art. 442¹ § 1 k.c. (odpowiedzialność pracownicza)"
+PODSTAWA_PRACOWNICZA = "Art. 291 § 2 k.p. (odpowiedzialność pracownicza)"
+PODSTAWA_PRACOWNICZA_UMYSLNA = "Art. 291 § 3 k.p. w zw. z art. 442¹ § 1 k.c. (szkoda umyślna pracownika)"
 PODSTAWA_DELIKTOWA = "Art. 442¹ § 1 k.c. (szkoda deliktowa)"
 PODSTAWA_PRZESTEPSTWO = "Art. 442¹ § 2 k.c. (szkoda z przestępstwa – 20 lat od czynu)"
 PODSTAWA_WYROK = "Art. 125 § 1 k.c. (wyrok)"
@@ -346,11 +347,13 @@ def _oblicz_termin_deliktowy(
     data_zdarzenia: date,
     data_dowiedzenia: date,
     czy_przestepstwo: bool,
+    czy_umyslne: bool,
     typ_odpowiedzialnosci: TypOdpowiedzialnosci
-) -> tuple[date, str, list[str], list[str]]:
+) -> tuple[date, str, list[str], list[str], tuple[int, int, str]]:
     """
     Oblicza termin przedawnienia szkody (art. 442¹ k.c. / art. 291 k.p.).
-    Zwraca: (termin, podstawa_prawna, zalozenia, ostrzezenia)
+    Zwraca: (termin, podstawa_prawna, zalozenia, ostrzezenia, parametry_resetu),
+    gdzie parametry_resetu = (lata_od_resetu, lata_capu_od_zdarzenia, podstawa_capu).
     """
     zalozenia: list[str] = []
     ostrzezenia: list[str] = []
@@ -359,6 +362,7 @@ def _oblicz_termin_deliktowy(
         # Art. 442¹ § 2 k.c.: 20 lat od popełnienia przestępstwa
         termin = dodaj_lata(data_zdarzenia, 20)
         podstawa = PODSTAWA_PRZESTEPSTWO
+        parametry_resetu = (20, 20, "art. 442¹ § 2 k.c.")
         zalozenia.append(
             "Szkoda wynikła ze zbrodni lub występku: 20 lat od dnia popełnienia "
             "przestępstwa, bez względu na moment dowiedzenia się o szkodzie "
@@ -366,53 +370,76 @@ def _oblicz_termin_deliktowy(
         )
         if typ_odpowiedzialnosci == TypOdpowiedzialnosci.PRACOWNICZA:
             zalozenia.append(
-                "Odpowiedzialność pracownicza: mimo 3-letniego terminu z art. 291 § 1 k.p., "
-                "szkoda z przestępstwa podlega 20-letniemu terminowi z art. 442¹ § 2 k.c."
+                "Odpowiedzialność pracownicza przy szkodzie z przestępstwa: 20-letni "
+                "termin z art. 442¹ § 2 k.c."
             )
-    else:
-        # Art. 442¹ § 1 k.c.: 3 lata od dowiedzenia się, max 10 lat od zdarzenia
-        termin_3_lata = dodaj_lata(data_dowiedzenia, 3)
-        termin_10_lat = dodaj_lata(data_zdarzenia, 10)
+        return termin, podstawa, zalozenia, ostrzezenia, parametry_resetu
 
-        if typ_odpowiedzialnosci == TypOdpowiedzialnosci.PRACOWNICZA:
+    if typ_odpowiedzialnosci == TypOdpowiedzialnosci.PRACOWNICZA:
+        if czy_umyslne:
+            # Art. 291 § 3 k.p. -> przepisy k.c. (art. 442¹ § 1): 3 lata od dowiedzenia, max 10 lat
+            termin_3_lata = dodaj_lata(data_dowiedzenia, 3)
+            termin_10_lat = dodaj_lata(data_zdarzenia, 10)
+            termin = min(termin_3_lata, termin_10_lat)
+            podstawa = PODSTAWA_PRACOWNICZA_UMYSLNA
+            parametry_resetu = (3, 10, "art. 442¹ § 1 k.c.")
+            zalozenia.append(
+                "Szkoda wyrządzona przez pracownika umyślnie: stosuje się przepisy "
+                "Kodeksu cywilnego (art. 291 § 3 k.p.), tj. 3 lata od dowiedzenia się "
+                "o szkodzie i osobie obowiązanej, nie dłużej niż 10 lat od zdarzenia "
+                "(art. 442¹ § 1 k.c.)."
+            )
+            if termin_10_lat < termin_3_lata:
+                zalozenia.append(
+                    "Zastosowano granicę 10 lat od zdarzenia (art. 442¹ § 1 k.c.) – "
+                    "jest krótsza niż 3 lata od dowiedzenia się."
+                )
+        else:
+            # Art. 291 § 2 k.p.: 1 rok od powzięcia wiadomości, nie później niż 3 lata od wyrządzenia
+            termin_1_rok = dodaj_lata(data_dowiedzenia, 1)
+            termin_3_lata = dodaj_lata(data_zdarzenia, 3)
+            termin = min(termin_1_rok, termin_3_lata)
             podstawa = PODSTAWA_PRACOWNICZA
+            parametry_resetu = (1, 3, "art. 291 § 2 k.p.")
             zalozenia.append(
-                "Odpowiedzialność pracownicza za szkodę: 3 lata od dnia, w którym "
-                "pracodawca dowiedział się o szkodzie i o osobie obowiązanej do jej "
-                "naprawienia (art. 291 § 1 k.p.)."
+                "Odpowiedzialność pracownicza (nieumyślna): 1 rok od dnia, w którym "
+                "pracodawca powziął wiadomość o wyrządzeniu szkody i o osobie obowiązanej "
+                "do jej naprawienia, nie później niż 3 lata od jej wyrządzenia "
+                "(art. 291 § 2 k.p.)."
             )
-        else:
-            podstawa = PODSTAWA_DELIKTOWA
-            zalozenia.append(
-                "Czyn niedozwolony bez kwalifikacji karnej: 3 lata od dnia dowiedzenia się "
-                "o szkodzie i o osobie obowiązanej do jej naprawienia (art. 442¹ § 1 k.c.)."
-            )
+            if termin_3_lata < termin_1_rok:
+                zalozenia.append(
+                    "Zastosowano granicę 3 lat od wyrządzenia szkody (art. 291 § 2 k.p.) – "
+                    "jest krótsza niż rok od powzięcia wiadomości."
+                )
+        return termin, podstawa, zalozenia, ostrzezenia, parametry_resetu
 
-        if termin_10_lat < termin_3_lata:
-            termin = termin_10_lat
-            zalozenia.append(
-                "Zastosowano granicę 10 lat od zdarzenia wywołującego szkodę "
-                "(art. 442¹ § 1 k.c.) – jest krótsza niż 3 lata od dowiedzenia się."
-            )
-            ostrzezenia.append(
-                "Termin 3 lat od dowiedzenia się upłynąłby później, ale został ograniczony "
-                "bezwzględnym terminem 10 lat od zdarzenia (art. 442¹ § 1 k.c.)."
-            )
-        else:
-            termin = termin_3_lata
-            zalozenia.append(
-                f"Granica 10 lat od zdarzenia ({_format_data(termin_10_lat)}) nie została "
-                f"przekroczona – obowiązuje termin 3 lat od dowiedzenia się."
-            )
+    # Art. 442¹ § 1 k.c.: 3 lata od dowiedzenia się, max 10 lat od zdarzenia
+    termin_3_lata = dodaj_lata(data_dowiedzenia, 3)
+    termin_10_lat = dodaj_lata(data_zdarzenia, 10)
+    termin = min(termin_3_lata, termin_10_lat)
+    podstawa = PODSTAWA_DELIKTOWA
+    parametry_resetu = (3, 10, "art. 442¹ § 1 k.c.")
+    zalozenia.append(
+        "Czyn niedozwolony bez kwalifikacji karnej: 3 lata od dnia dowiedzenia się "
+        "o szkodzie i o osobie obowiązanej do jej naprawienia (art. 442¹ § 1 k.c.)."
+    )
+    if termin_10_lat < termin_3_lata:
+        zalozenia.append(
+            "Zastosowano granicę 10 lat od zdarzenia wywołującego szkodę "
+            "(art. 442¹ § 1 k.c.) – jest krótsza niż 3 lata od dowiedzenia się."
+        )
+        ostrzezenia.append(
+            "Termin 3 lat od dowiedzenia się upłynąłby później, ale został ograniczony "
+            "bezwzględnym terminem 10 lat od zdarzenia (art. 442¹ § 1 k.c.)."
+        )
+    else:
+        zalozenia.append(
+            f"Granica 10 lat od zdarzenia ({_format_data(termin_10_lat)}) nie została "
+            f"przekroczona – obowiązuje termin 3 lat od dowiedzenia się."
+        )
 
-        if typ_odpowiedzialnosci == TypOdpowiedzialnosci.PRACOWNICZA:
-            ostrzezenia.append(
-                "UWAGA: dla odpowiedzialności pracowniczej właściwy jest art. 291 § 1 k.p. "
-                "(3 lata od dowiedzenia się); stosowanie 10-letniej granicy z art. 442¹ § 1 k.c. "
-                "wymaga weryfikacji prawnej."
-            )
-
-    return termin, podstawa, zalozenia, ostrzezenia
+    return termin, podstawa, zalozenia, ostrzezenia, parametry_resetu
 
 
 def analiza_deliktowa(
@@ -434,7 +461,10 @@ def analiza_deliktowa(
     - art. 442¹ § 1 k.c.: 3 lata od dowiedzenia się o szkodzie i sprawcy,
       nie dłużej niż 10 lat od zdarzenia (szkoda bez kwalifikacji karnej)
     - art. 442¹ § 2 k.c.: 20 lat od popełnienia przestępstwa (szkoda z przestępstwa)
-    - art. 291 § 1 k.p.: 3 lata od dowiedzenia się (odpowiedzialność pracownicza)
+    - art. 291 § 2 k.p.: 1 rok od powzięcia wiadomości o szkodzie, nie później niż
+      3 lata od jej wyrządzenia (odpowiedzialność pracownicza – nieumyślna)
+    - art. 291 § 3 k.p.: szkoda umyślna pracownika – stosuje się przepisy k.c.
+      (art. 442¹ § 1 k.c.: 3 lata od dowiedzenia się, max 10 lat)
     - brak reguły końca roku (art. 118 § 1 k.c. nie dotyczy 442¹ k.c.)
     - zdarzenia (wpłaty, wyrok, egzekucja) przetwarzane chronologicznie
 
@@ -468,20 +498,14 @@ def analiza_deliktowa(
     if typ_odpowiedzialnosci == TypOdpowiedzialnosci.PRACOWNICZA:
         wynik.zalozenia.append(
             f"Reżim: odpowiedzialność pracownicza "
-            f"{'(umyślna)' if czy_umyslne else '(nieumyślna)'}"
+            f"{'(umyślna – przepisy k.c.)' if czy_umyslne else '(nieumyślna)'}"
         )
-        if czy_umyslne:
-            wynik.ostrzezenia.append(
-                "Szkoda wyrządzona umyślnie: pracownik odpowiada w pełnym zakresie "
-                "(art. 122 k.p. w zw. z art. 115 k.p.); ocena może wpływać na zastosowanie "
-                "reżimu karnego (art. 442¹ § 2 k.c.), jeśli czyn stanowi przestępstwo."
-            )
     else:
         wynik.zalozenia.append("Reżim: odpowiedzialność deliktowa (osoba trzecia)")
 
     # Oblicz termin bazowy dla szkody
-    termin_bazowy, podstawa, zal_delikt, ostrz_delikt = _oblicz_termin_deliktowy(
-        data_zdarzenia, data_dowiedzenia_o_szkodzie, czy_przestepstwo, typ_odpowiedzialnosci
+    termin_bazowy, podstawa, zal_delikt, ostrz_delikt, reset_params = _oblicz_termin_deliktowy(
+        data_zdarzenia, data_dowiedzenia_o_szkodzie, czy_przestepstwo, czy_umyslne, typ_odpowiedzialnosci
     )
     wynik.zalozenia.extend(zal_delikt)
 
@@ -614,13 +638,10 @@ def analiza_deliktowa(
         termin_ostateczny = dodaj_lata(aktualny_start, 6)
     else:
         # Jeśli wpłaty/umorzenie przesunęły start, przelicz termin od nowego startu.
-        # Reset nie może jednak wydłużyć bezwzględnej granicy liczonej od zdarzenia:
-        # 10 lat dla art. 442¹ § 1 k.c., 20 lat dla art. 442¹ § 2 k.c.
+        # Reset nie może jednak wydłużyć bezwzględnej granicy liczonej od zdarzenia,
+        # właściwej dla danego reżimu (art. 442¹ § 1/§ 2 k.c., art. 291 § 2 k.p.).
         if aktualny_start != zdarzenia[0].data:
-            if czy_przestepstwo:
-                lata_resetu, lata_cap, podstawa_cap = 20, 20, "art. 442¹ § 2 k.c."
-            else:
-                lata_resetu, lata_cap, podstawa_cap = 3, 10, "art. 442¹ § 1 k.c."
+            lata_resetu, lata_cap, podstawa_cap = reset_params
             termin_od_resetu = dodaj_lata(aktualny_start, lata_resetu)
             termin_cap = dodaj_lata(data_zdarzenia, lata_cap)
             termin_ostateczny = min(termin_od_resetu, termin_cap)
