@@ -252,17 +252,17 @@ def test_delikt_reset_nie_wydluza_cap_10_lat():
     assert r.status == "PRZEDAWNIONE"
 
 
-def test_przestepstwo_reset_nie_wydluza_cap_20_lat():
-    """Reset wpłatą nie wydłuża bezwzględnych 20 lat od czynu (art. 442¹ § 2 k.c.)."""
+def test_przestepstwo_reset_wydluza_termin():
+    """Reset (uznanie) wydłuża bieg – 20 lat od wpłaty (art. 442¹ § 2 w zw. z art. 123/124 k.c.)."""
     w = _wywolaj(
         date(2010, 1, 1), date(2010, 1, 1),
         czy_przestepstwo=True,
         wpłaty=[date(2023, 1, 1)], data_oceny=date(2025, 1, 1)
     )
     r = w.wyniki[0]
-    # Bez capa byłoby 2043-01-01; z capem 2030-01-01 (2010 + 20 lat).
-    assert r.termin == date(2030, 1, 1)
-    assert any("20 lat od zdarzenia" in z for z in r.zalozenia)
+    # 20 lat od wpłaty 2023-01-01 = 2043-01-01 (art. 442¹ § 2 k.c. nie jest limitem nieprzerywalnym).
+    assert r.termin == date(2043, 1, 1)
+    assert any("na nowo" in o for o in r.ostrzezenia)
 
 
 if __name__ == "__main__":

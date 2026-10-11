@@ -56,7 +56,7 @@ obliczeniową oddzieloną od interfejsu i pokrytą testami jednostkowymi.
 | Zagadnienie | Podstawa | Zastosowana reguła |
 |---|---|---|
 | Szkoda bez kwalifikacji karnej | art. 442¹ § 1 k.c. | 3 lata od dowiedzenia się, max 10 lat od zdarzenia |
-| Szkoda z przestępstwa | art. 442¹ § 2 k.c. | 20 lat od popełnienia czynu (bezwzględny limit – reset go nie wydłuża) |
+| Szkoda z przestępstwa | art. 442¹ § 2 k.c. | 20 lat od popełnienia czynu; podlega przerwaniu (art. 123 k.c.) |
 | Odpowiedzialność pracownicza (nieumyślna) | art. 291 § 2 k.p. | 1 rok od powzięcia wiadomości, max 3 lata od wyrządzenia |
 | Odpowiedzialność pracownicza (umyślna) | art. 291 § 3 k.p. | przepisy k.c. (art. 442¹ § 1 k.c.: 3 lata, max 10 lat) |
 
@@ -221,7 +221,7 @@ Architektura rozdziela trzy warstwy:
 | A | Lint (Ruff), usunięcie martwego kodu i nieużywanych importów | `—` |
 | B | Spójność podstaw prawnych: wspólne stałe dla logiki i interfejsu | `—` |
 | C | Obsługa oskarżenia prywatnego (art. 101 § 2 k.k.) | `—` |
-| D | Bezwzględny limit 20 lat od czynu po resecie biegu (art. 442¹ § 2 k.c.) | `—` |
+| D | Limit 20 lat od czynu po resecie biegu (art. 442¹ § 2 k.c.) – cofnięty | `—` |
 | E | Dopełnienie walidacji deliktów i daty oskarżenia prywatnego | `—` |
 | F | Dokumentacja: uzupełnienie historii zmian i opisu funkcji | `—` |
 

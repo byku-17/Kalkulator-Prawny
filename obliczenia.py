@@ -349,7 +349,7 @@ def _oblicz_termin_deliktowy(
     czy_przestepstwo: bool,
     czy_umyslne: bool,
     typ_odpowiedzialnosci: TypOdpowiedzialnosci
-) -> tuple[date, str, list[str], list[str], tuple[int, int, str]]:
+) -> tuple[date, str, list[str], list[str], tuple[int, Optional[int], str]]:
     """
     Oblicza termin przedawnienia szkody (art. 442¹ k.c. / art. 291 k.p.).
     Zwraca: (termin, podstawa_prawna, zalozenia, ostrzezenia, parametry_resetu),
@@ -362,7 +362,7 @@ def _oblicz_termin_deliktowy(
         # Art. 442¹ § 2 k.c.: 20 lat od popełnienia przestępstwa
         termin = dodaj_lata(data_zdarzenia, 20)
         podstawa = PODSTAWA_PRZESTEPSTWO
-        parametry_resetu = (20, 20, "art. 442¹ § 2 k.c.")
+        parametry_resetu = (20, None, "art. 442¹ § 2 k.c.")
         zalozenia.append(
             "Szkoda wynikła ze zbrodni lub występku: 20 lat od dnia popełnienia "
             "przestępstwa, bez względu na moment dowiedzenia się o szkodzie "
@@ -638,19 +638,28 @@ def analiza_deliktowa(
         termin_ostateczny = dodaj_lata(aktualny_start, 6)
     else:
         # Jeśli wpłaty/umorzenie przesunęły start, przelicz termin od nowego startu.
-        # Reset nie może jednak wydłużyć bezwzględnej granicy liczonej od zdarzenia,
-        # właściwej dla danego reżimu (art. 442¹ § 1/§ 2 k.c., art. 291 § 2 k.p.).
+        # Dla reżimów z bezwzględną granicą od zdarzenia (art. 442¹ § 1 k.c.,
+        # art. 291 § 2 k.p.) reset nie może jej wydłużyć; dla art. 442¹ § 2 k.c.
+        # (20 lat) takiej granicy nie ma – po przerwaniu bieg rozpoczyna się na nowo.
         if aktualny_start != zdarzenia[0].data:
             lata_resetu, lata_cap, podstawa_cap = reset_params
             termin_od_resetu = dodaj_lata(aktualny_start, lata_resetu)
-            termin_cap = dodaj_lata(data_zdarzenia, lata_cap)
-            termin_ostateczny = min(termin_od_resetu, termin_cap)
-            if termin_cap < termin_od_resetu:
-                wynik.zalozenia.append(
-                    f"Reset biegu ({_format_data(aktualny_start)}) ograniczony bezwzględną "
-                    f"granicą {lata_cap} lat od zdarzenia ({_format_data(termin_cap)}) "
-                    f"({podstawa_cap})."
+            if lata_cap is None:
+                termin_ostateczny = termin_od_resetu
+                wynik.ostrzezenia.append(
+                    f"Uznanie/umorzenie {_format_data(aktualny_start)}: bieg przedawnienia "
+                    f"rozpoczyna się na nowo (art. 124 § 1 k.c.). Termin 20 lat z "
+                    f"art. 442¹ § 2 k.c. nie jest limitem nieprzerywalnym (stanowisko dominujące)."
                 )
+            else:
+                termin_cap = dodaj_lata(data_zdarzenia, lata_cap)
+                termin_ostateczny = min(termin_od_resetu, termin_cap)
+                if termin_cap < termin_od_resetu:
+                    wynik.zalozenia.append(
+                        f"Reset biegu ({_format_data(aktualny_start)}) ograniczony bezwzględną "
+                        f"granicą {lata_cap} lat od zdarzenia ({_format_data(termin_cap)}) "
+                        f"({podstawa_cap})."
+                    )
         else:
             termin_ostateczny = termin_bazowy
 
