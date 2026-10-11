@@ -1,6 +1,5 @@
 import streamlit as st
 from datetime import date
-from dateutil.relativedelta import relativedelta
 from obliczenia import (
     analiza_cywilna,
     analiza_deliktowa,
@@ -101,7 +100,7 @@ else:
     typ_odpowiedzialnosci = (
         TypOdpowiedzialnosci.PRACOWNICZA if czy_pracownik else TypOdpowiedzialnosci.DELIKTOWA
     )
-    rodzaj_zdarzenia = st.selectbox(
+    st.selectbox(
         "Rodzaj zdarzenia deficytowego",
         ["Przywłaszczenie zaliczek / zbiórek", "Nieuprawnione wypłaty BLIK / z karty", "Kradzież gotówki / karty", "Fałszowanie dowodów bankowania", "Umowy fikcyjne / na słupa"]
     )
@@ -194,10 +193,10 @@ with col2:
 
     # Rodzaj kary: osobno automatyczny termin (art. 107 § 1) i ewentualny wniosek (art. 107 § 4)
     OPCJE_ZATARCIA = {
-        "Grzywna": {"auto": 3, "wyjatek": None, "koniec_roku": False},
-        "Kara ograniczenia wolności": {"auto": 3, "wyjatek": None, "koniec_roku": False},
-        "Pozbawienie wolności do 3 lat": {"auto": 5, "wyjatek": 5, "koniec_roku": False},
-        "Pozbawienie wolności powyżej 3 lat": {"auto": 10, "wyjatek": 5, "koniec_roku": False},
+        "Grzywna": {"auto": 3, "wyjatek": None},
+        "Kara ograniczenia wolności": {"auto": 3, "wyjatek": None},
+        "Pozbawienie wolności do 3 lat": {"auto": 5, "wyjatek": 5},
+        "Pozbawienie wolności powyżej 3 lat": {"auto": 10, "wyjatek": 5},
     }
     wybor_zatarcia = st.selectbox("Orzeczona kara (dla zatarcia z art. 107 k.k.)", list(OPCJE_ZATARCIA.keys()), disabled=(wyrok_k is None), help="Rodzaj kary decyduje o terminie zatarcia z mocy prawa (art. 107 § 1 k.k.).")
 

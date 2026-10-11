@@ -27,8 +27,6 @@ class ZdarzeniePrzedawnienia:
     typ: TypZdarzenia
     data: date
     opis: str
-    # dla wpłat: czy to uznanie długu (art. 123 k.c.) czy po prostu wpłata
-    czy_uznanie: bool = True
 
 
 @dataclass
@@ -144,14 +142,6 @@ def analiza_cywilna(
         data_zawarcia_umowy = data_wymagalnosci
         wynik.ostrzezenia.append("Brak daty zawarcia umowy – przyjmowano datę wymagalności jako datę zawarcia.")
 
-    # Określ rejim przedawnienia (stary/nowy) na podstawie daty ZAWARCIA umowy
-    stary_rezim = _czy_stara_przedawnienie(data_zawarcia_umowy)
-    wynik.zalozenia.append(
-        f"Data zawarcia umowy: {_format_data(data_zawarcia_umowy)} – "
-        f"{'przepisy STARE (przed 09.07.2018, bez końca roku)' if stary_rezim else 'przepisy NOWE (po 09.07.2018, z końcem roku)'}"
-    )
-    wynik.zalozenia.append(f"Data wymagalności (początek biegu): {_format_data(data_wymagalnosci)}")
-
     # Buduj oś czasu zdarzeń
     zdarzenia: list[ZdarzeniePrzedawnienia] = []
 
@@ -188,8 +178,7 @@ def analiza_cywilna(
             zdarzenia.append(ZdarzeniePrzedawnienia(
                 typ=TypZdarzenia.WPLATA,
                 data=w,
-                opis=f"Wpłata / uznanie długu",
-                czy_uznanie=True  # zakładamy, że wpłata to uznanie (art. 123 k.c.)
+                opis=f"Wpłata / uznanie długu (art. 123 k.c.)"
             ))
 
     # 3. Wyrok (jeśli jest)
@@ -512,8 +501,7 @@ def analiza_deliktowa(
             zdarzenia.append(ZdarzeniePrzedawnienia(
                 typ=TypZdarzenia.WPLATA,
                 data=w,
-                opis="Wpłata / uznanie roszczenia odszkodowawczego",
-                czy_uznanie=True
+                opis="Wpłata / uznanie roszczenia odszkodowawczego (art. 123 k.c.)"
             ))
 
     if data_wyroku_cywilnego:
