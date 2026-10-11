@@ -82,6 +82,8 @@ niepewne terminy jako pewne:
   (status „dane niewystarczające”).
 - Zatarcie: przeszkody z art. 107 § 6 k.k. (środek karny/przepadek/środek kompensacyjny)
   oraz zawieszenie wykonania kary (6 miesięcy od upływu okresu próby).
+- Sporna kwestia stosowania reguły końca roku (art. 118 § 1 k.c.) do terminów
+  z art. 442¹ k.c. — aplikacja jej nie stosuje, co wymaga weryfikacji prawnej.
 - Zatarcie, gdy nie podano daty wykonania / darowania kary (status „dane niewystarczające”).
 - Złożone stany faktyczne (czyny ciągłe, skutkowe, wielodniowe) wymagają oceny indywidualnej.
 

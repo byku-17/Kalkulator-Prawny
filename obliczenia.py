@@ -681,6 +681,12 @@ def analiza_deliktowa(
 
     komunikacja += " (bez reguły końca roku – art. 442¹ k.c.)"
 
+    wynik.ostrzezenia.append(
+        "Zastosowano brak reguły końca roku (art. 118 § 1 k.c.) do terminu z art. 442¹ k.c. – "
+        "stanowisko sporne w doktrynie (dla 3-letniego terminu z § 1 bywa stosowany koniec roku); "
+        "wymaga weryfikacji prawnej."
+    )
+
     wynik.wyniki.append(WynikObliczenia(
         nazwa=f"Przedawnienie szkody [{aktualna_podstawa}]",
         termin=termin_ostateczny,
