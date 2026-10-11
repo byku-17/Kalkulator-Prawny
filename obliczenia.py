@@ -120,6 +120,13 @@ def _oblicz_termin_koncowy(start: date, lata: int, stosowac_koniec_roku: bool) -
     return termin
 
 
+def _lata_po_wyroku(data_wyroku: date) -> int:
+    """Okres przedawnienia roszczenia stwierdzonego prawomocnym orzeczeniem
+    (art. 125 § 1 k.c.): 10 lat dla orzeczeń prawomocnych przed 09.07.2018
+    (przepisy dawne), 6 lat od 09.07.2018 (nowelizacja 2018)."""
+    return 10 if data_wyroku < date(2018, 7, 9) else 6
+
+
 def analiza_cywilna(
     data_zawarcia_umowy: Optional[date],
     data_wymagalnosci: Optional[date],
@@ -141,7 +148,7 @@ def analiza_cywilna(
     - art. 123 § 1 pkt 1 k.c.: wszczęcie egzekucji -> przerwanie biegu
     - art. 124 § 2 k.c.: przedawnienie nie biegnie na nowo do zakończenia postępowania
     - art. 124 § 1 k.c.: po zakończeniu (umorzeniu) egzekucji -> bieg od nowa
-    - art. 125 k.c.: wyrok -> 6 lat od wyroku (reżim specjalny)
+    - art. 125 § 1 k.c.: wyrok -> 6 lat od wyroku (10 lat, gdy orzeczenie przed 09.07.2018)
     - przepisy przejściowe 2018: umowy przed 09.07.2018 = bez końca roku
     """
     wynik = WynikAnalizyCywilnej()
@@ -229,7 +236,7 @@ def analiza_cywilna(
                 # Po wyroku wpłata nie resetuje przedawnienia automatycznie
                 wynik.ostrzezenia.append(
                     f"Wpłata {_format_data(zdarzenie.data)} PO wyroku: "
-                    f"nie przesądza o przedawnieniu (art. 125 k.c. – reżim 6 lat od wyroku)."
+                    f"nie przesądza o przedawnieniu (art. 125 k.c. – reżim {aktualne_lata} lat od wyroku)."
                 )
             elif egzekucja_w_toku:
                 # W trakcie egzekucji wpłata nie ma wpływu na bieg (art. 124 § 2 k.c.)
@@ -252,13 +259,13 @@ def analiza_cywilna(
             # Wyrok zmienia reżim na 6 lat (art. 125 § 1 k.c.)
             wyrok_uzyskany = True
             aktualny_start = zdarzenie.data
-            aktualne_lata = 6
+            aktualne_lata = _lata_po_wyroku(zdarzenie.data)
             aktualna_podstawa = PODSTAWA_WYROK
             # Egzekucja kończy się wyrokiem (jeśli była)
             egzekucja_w_toku = False
             wynik.zalozenia.append(
                 f"Wyrok {_format_data(zdarzenie.data)}: "
-                f"reżim specjalny – 6 lat od wyroku (art. 125 § 1 k.c.)"
+                f"reżim specjalny – {aktualne_lata} lat od wyroku (art. 125 § 1 k.c.)"
             )
 
         elif zdarzenie.typ == TypZdarzenia.WYSZCZ_EGZEKUCJI:
@@ -294,7 +301,7 @@ def analiza_cywilna(
                 if wyrok_uzyskany:
                     wynik.zalozenia.append(
                         f"Umorzenie egzekucji {_format_data(zdarzenie.data)} po wyroku: "
-                        f"brak wpływu na przedawnienie (trwa 6 lat od wyroku)."
+                        f"brak wpływu na przedawnienie (trwa {aktualne_lata} lat od wyroku)."
                     )
                 else:
                     wynik.zalozenia.append(
@@ -319,7 +326,7 @@ def analiza_cywilna(
     stosowac_koniec_roku = (not stary_rezim) and (not wyrok_uzyskany)
     
     if wyrok_uzyskany:
-        # Dla wyroku nie ma reguły końca roku (art. 125 k.c. – 6 lat od wyroku)
+        # Dla wyroku nie ma reguły końca roku (art. 125 § 1 k.c.)
         stosowac_koniec_roku = False
 
     termin_ostateczny = _oblicz_termin_koncowy(aktualny_start, aktualne_lata, stosowac_koniec_roku)
@@ -561,6 +568,7 @@ def analiza_deliktowa(
     aktualna_podstawa = podstawa
     egzekucja_w_toku = False
     wyrok_uzyskany = False
+    wyrok_lata = 6
 
     for zdarzenie in zdarzenia:
         if zdarzenie.typ == TypZdarzenia.START:
@@ -589,9 +597,10 @@ def analiza_deliktowa(
             wyrok_uzyskany = True
             aktualny_start = zdarzenie.data
             aktualna_podstawa = PODSTAWA_WYROK
+            wyrok_lata = _lata_po_wyroku(zdarzenie.data)
             egzekucja_w_toku = False
             wynik.zalozenia.append(
-                f"Wyrok {_format_data(zdarzenie.data)}: reżim 6 lat od wyroku (art. 125 § 1 k.c.)."
+                f"Wyrok {_format_data(zdarzenie.data)}: reżim {wyrok_lata} lat od wyroku (art. 125 § 1 k.c.)."
             )
 
         elif zdarzenie.typ == TypZdarzenia.WYSZCZ_EGZEKUCJI:
@@ -643,7 +652,7 @@ def analiza_deliktowa(
 
     # Oblicz ostateczny termin
     if wyrok_uzyskany:
-        termin_ostateczny = dodaj_lata(aktualny_start, 6)
+        termin_ostateczny = dodaj_lata(aktualny_start, wyrok_lata)
     else:
         # Jeśli wpłaty/umorzenie przesunęły start, przelicz termin od nowego startu.
         # Dla reżimów z bezwzględną granicą od zdarzenia (art. 442¹ § 1 k.c.,

@@ -50,7 +50,7 @@ obliczeniową oddzieloną od interfejsu i pokrytą testami jednostkowymi.
 | Uznanie długu / wpłata | art. 123 k.c. | nowy bieg od daty uznania |
 | Wszczęcie egzekucji | art. 124 k.c. | zawieszenie biegu |
 | Umorzenie egzekucji | art. 124 § 2 k.c. | bieg od nowa od umorzenia |
-| Prawomocny wyrok / nakaz | art. 125 § 1 k.c. | 6 lat od wyroku |
+| Prawomocny wyrok / nakaz | art. 125 § 1 k.c. | 6 lat od wyroku (10 lat, gdy orzeczenie przed 09.07.2018) |
 
 ### Część cywilna – szkody / pracownik
 | Zagadnienie | Podstawa | Zastosowana reguła |
@@ -161,12 +161,12 @@ Zakres testów:
 
 | Plik | Zakres | Liczba |
 |---|---|---|
-| `tests/test_obliczenia.py` | logika umowna, karna, zatarcie | 37 |
-| `tests/test_deliktowa.py` | szkody / odpowiedzialność pracownicza | 21 |
+| `tests/test_obliczenia.py` | logika umowna, karna, zatarcie | 38 |
+| `tests/test_deliktowa.py` | szkody / odpowiedzialność pracownicza | 22 |
 | `tests/test_validacja.py` | walidacja danych wejściowych | 21 |
 | `tests/test_podstawy.py` | spójność podstaw prawnych (stałe) | 5 |
 | `tests/test_app_smoke.py` | dymny test interfejsu (AppTest) | 4 |
-| **Razem** | | **88** |
+| **Razem** | | **90** |
 
 Lint kodu (Ruff):
 

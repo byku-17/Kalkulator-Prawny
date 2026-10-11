@@ -203,6 +203,18 @@ def test_delikt_wyrok_6_lat():
     assert "125" in r.podstawa_prawna
 
 
+def test_delikt_wyrok_przed_2018_10_lat():
+    """Wyrok przed 09.07.2018 -> 10 lat (dawne art. 125 § 1 k.c.)."""
+    w = _wywolaj(
+        date(2015, 1, 1), date(2015, 1, 1),
+        data_wyroku_cywilnego=date(2016, 1, 1), data_oceny=date(2025, 1, 1)
+    )
+    r = w.wyniki[0]
+    # 10 lat od wyroku 2016-01-01 = 2026-01-01
+    assert r.termin == date(2026, 1, 1)
+    assert "125" in r.podstawa_prawna
+
+
 def test_delikt_wplata_w_trakcie_egzekucji():
     """Wpłata w trakcie egzekucji nie resetuje (zawieszenie)."""
     w = _wywolaj(
