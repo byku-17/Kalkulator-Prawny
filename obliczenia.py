@@ -682,6 +682,10 @@ def analiza_karna(
     - przepisy szczególne przewidujące inne terminy przedawnienia
     - wydłużenie karalności w trybie art. 102 wobec braku daty wszczęcia
       postępowania przeciwko osobie
+
+    Uwaga: data_umor_k ma charakter wyłącznie ewidencyjny (nie zmienia terminu
+    karalności) – skutek umorzenia zależy od podstawy prawnej i wymaga oceny
+    indywidualnej.
     """
     wynik = WynikAnalizyKarne()
 
