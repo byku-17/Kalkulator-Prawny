@@ -616,13 +616,23 @@ def analiza_deliktowa(
     if wyrok_uzyskany:
         termin_ostateczny = dodaj_lata(aktualny_start, 6)
     else:
-        # Jeśli wpłaty/umorzenie przesunęły start, przelicz termin deliktowy od nowego startu
+        # Jeśli wpłaty/umorzenie przesunęły start, przelicz termin deliktowy od nowego startu.
+        # Dla szkody bez kwalifikacji karnej zachowujemy bezwzględną granicę
+        # 10 lat od zdarzenia (art. 442¹ § 1 k.c.) — reset nie może jej wydłużyć.
         if aktualny_start != zdarzenia[0].data:
             # Po uznaniu/umorzeniu biegnie standardowy termin właściwy dla reżimu
             if czy_przestepstwo:
                 termin_ostateczny = dodaj_lata(aktualny_start, 20)
             else:
-                termin_ostateczny = dodaj_lata(aktualny_start, 3)
+                termin_od_resetu = dodaj_lata(aktualny_start, 3)
+                termin_cap_10 = dodaj_lata(data_zdarzenia, 10)
+                termin_ostateczny = min(termin_od_resetu, termin_cap_10)
+                if termin_cap_10 < termin_od_resetu:
+                    wynik.zalozenia.append(
+                        f"Reset biegu ({_format_data(aktualny_start)}) ograniczony bezwzględną "
+                        f"granicą 10 lat od zdarzenia ({_format_data(termin_cap_10)}) "
+                        f"(art. 442¹ § 1 k.c.)."
+                    )
         else:
             termin_ostateczny = termin_bazowy
 
