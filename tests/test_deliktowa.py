@@ -218,6 +218,18 @@ def test_delikt_umorzenie_resetuje():
     assert r.termin == date(2027, 1, 1)
 
 
+def test_delikt_reset_nie_wydluza_cap_10_lat():
+    """Reset wpłatą nie wydłuża bezwzględnych 10 lat od zdarzenia (fix 3a)."""
+    w = _wywolaj(
+        date(2010, 1, 1), date(2010, 1, 1),
+        wpłaty=[date(2023, 1, 1)], data_oceny=date(2025, 1, 1)
+    )
+    r = w.wyniki[0]
+    # Bez capa byłoby 2026-01-01 (OK); z capem 2020-01-01 (PRZEDAWNIONE).
+    assert r.termin == date(2020, 1, 1)
+    assert r.status == "PRZEDAWNIONE"
+
+
 if __name__ == "__main__":
     import pytest
     pytest.main([__file__, "-v"])

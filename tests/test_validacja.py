@@ -389,6 +389,27 @@ def test_delikt_poprawne_dane():
     assert len(bledy) == 0
 
 
+def test_delikt_przestepstwo_ostrzezenie_bez_dowiedzenia():
+    """Szkoda z przestępstwa bez daty dowiedzenia: fallback na datę zdarzenia (fix 3b)."""
+    _, ostrzezenia = waliduj_dane(
+        data_zawarcia_umowy=None,
+        data_wymagalnosci=None,
+        data_zdarzenia=date(2023, 1, 1),
+        data_dowiedzenia=None,
+        wpłaty=[],
+        data_wyroku_cywilnego=None,
+        data_wszcz_egzekucji=None,
+        data_umor_egzekucji=None,
+        data_czynu=date(2024, 1, 1),
+        wszczecie_k=None,
+        umorzenie_k=None,
+        wyrok_k=None,
+        data_wykonania_kary=None,
+        czy_delikt=True
+    )
+    assert any("Data czynu jest późniejsza" in o for o in ostrzezenia)
+
+
 if __name__ == "__main__":
     import pytest
     pytest.main([__file__, "-v"])
