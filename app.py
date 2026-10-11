@@ -156,6 +156,7 @@ with col1:
     )
     # Parsowanie wpłat
     wpłaty = []
+    bledne_wplaty = []
     if wpłaty_input.strip():
         for linia in wpłaty_input.strip().split('\n'):
             linia = linia.strip()
@@ -163,7 +164,12 @@ with col1:
                 try:
                     wpłaty.append(date.fromisoformat(linia))
                 except ValueError:
-                    pass  # ignoruj błędne formaty
+                    bledne_wplaty.append(linia)
+    if bledne_wplaty:
+        st.warning(
+            "Nie rozpoznano formatu daty (oczekiwano RRRR-MM-DD): "
+            + ", ".join(bledne_wplaty)
+        )
     
     data_wyroku_cywilnego = st.date_input("Data prawomocnego wyroku cywilnego / nakazu", value=None, min_value=MIN_DATE, help="Prawomocne orzeczenie sądu wyznacza odrębny reżim przedawnienia (6 lat od wyroku – art. 125 k.c.).")
 
