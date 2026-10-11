@@ -67,6 +67,7 @@ obliczeniową oddzieloną od interfejsu i pokrytą testami jednostkowymi.
 | Ustawowe przedawnienie karalności | art. 101 § 1 k.k. | termin zależny od kwalifikacji czynu |
 | Karalność – oskarżenie prywatne | art. 101 § 2 k.k. | 1 rok od dowiedzenia się o sprawcy, max 3 lata od czynu |
 | Przedłużenie karalności | art. 102 § 1 k.k. | +10 lat (art. 101 § 1) lub +5 lat (oskarżenie prywatne), jeżeli wszczęto postępowanie w terminie |
+| Przedawnienie wykonania kary | art. 103 § 1 k.k. | 30/15/10 lat od uprawomocnienia (zależnie od kary) |
 | Zatarcie z mocy prawa | art. 107 § 1, § 3, § 4, § 4a k.k. | grzywna 1 rok; ograniczenie wolności 3 lata; pozbawienie wolności 10 lat |
 | Zatarcie na wniosek skazanego | art. 107 § 2 k.k. | po 5 latach, gdy kara pozbawienia wolności ≤ 3 lat |
 
@@ -165,12 +166,12 @@ Zakres testów:
 
 | Plik | Zakres | Liczba |
 |---|---|---|
-| `tests/test_obliczenia.py` | logika umowna, karna, zatarcie | 40 |
+| `tests/test_obliczenia.py` | logika umowna, karna, zatarcie | 43 |
 | `tests/test_deliktowa.py` | szkody / odpowiedzialność pracownicza | 23 |
 | `tests/test_validacja.py` | walidacja danych wejściowych | 21 |
 | `tests/test_podstawy.py` | spójność podstaw prawnych (stałe) | 5 |
 | `tests/test_app_smoke.py` | dymny test interfejsu (AppTest) | 4 |
-| **Razem** | | **93** |
+| **Razem** | | **96** |
 
 Lint kodu (Ruff):
 

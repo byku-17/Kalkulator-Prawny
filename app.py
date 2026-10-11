@@ -10,6 +10,7 @@ from obliczenia import (
     analiza_cywilna,
     analiza_deliktowa,
     analiza_karna,
+    analiza_wykonania_kary,
     analiza_zatarcia,
 )
 from walidacja import waliduj_dane
@@ -101,6 +102,13 @@ OPCJE_ZATARCIA = {
 }
 
 
+OPCJE_WYKONANIA = {
+    "Pozbawienie wolności powyżej 5 lat albo kara surowsza (25 lat, dożywocie)": 30,
+    "Pozbawienie wolności do 5 lat": 15,
+    "Inna kara (grzywna, ograniczenie wolności)": 10,
+}
+
+
 # ─────────────────────────────────────────────
 # KROK 1 — TYP SPRAWY
 # ─────────────────────────────────────────────
@@ -154,6 +162,7 @@ umorzenie_k = None
 wyrok_k = None
 data_wykonania_kary = None
 wybor_zatarcia = None
+wybor_wykonania = None
 
 if jest_klient:
     st.subheader("Roszczenie z umowy")
@@ -203,6 +212,12 @@ if etap_karny:
 if etap_zatarcie or etap_karny:
     wyrok_k = st.date_input("Data wyroku karnego skazującego", value=None, min_value=MIN_DATE)
 
+if wyrok_k is not None:
+    wybor_wykonania = st.selectbox(
+        "Rodzaj kary (dla przedawnienia wykonania kary, art. 103 k.k.)",
+        list(OPCJE_WYKONANIA.keys()),
+    )
+
 if etap_zatarcie:
     data_wykonania_kary = st.date_input("Data wykonania / darowania kary", value=None, min_value=MIN_DATE)
     wybor_zatarcia = st.selectbox(
@@ -247,6 +262,17 @@ def _karta_karna(wynik: WynikAnalizyKarne) -> None:
             with st.expander("🔍 Założenia i przebieg obliczeń"):
                 for z in w.zalozenia:
                     st.write(f"• {z}")
+        for o in w.ostrzezenia:
+            st.caption(f"ℹ️ {o}")
+
+
+def _karta_wykonania(wynik: WynikAnalizyKarne) -> None:
+    for w in wynik.wyniki:
+        if w.status == "TRWA":
+            st.success(f"✅ **{w.nazwa}**: karę można jeszcze wykonać do **{w.termin.strftime('%d.%m.%Y')}**.")
+        elif w.status == "WYGASŁE":
+            st.error(f"❌ **{w.nazwa}**: kara przedawniona {w.termin.strftime('%d.%m.%Y')} — nie można już wykonać.")
+        st.caption(f"📜 {w.podstawa_prawna}")
         for o in w.ostrzezenia:
             st.caption(f"ℹ️ {o}")
 
@@ -313,6 +339,14 @@ if st.button("Sprawdź sprawę", type="primary"):
         )
         st.markdown("#### Karalność (możliwość ścigania)")
         _karta_karna(wynik_karny)
+
+    # --- Wykonanie kary (tytuł wykonawczy karny) ---
+    if wyrok_k is not None and wybor_wykonania is not None:
+        wynik_wykonania = analiza_wykonania_kary(
+            wyrok_k, OPCJE_WYKONANIA[wybor_wykonania], data_oceny, wybor_wykonania,
+        )
+        st.markdown("#### Wykonanie kary (tytuł wykonawczy karny)")
+        _karta_wykonania(wynik_wykonania)
 
     # --- Zatarcie ---
     if etap_zatarcie and wyrok_k is not None and wybor_zatarcia is not None:

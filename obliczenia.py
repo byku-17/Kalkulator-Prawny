@@ -875,6 +875,62 @@ def analiza_karna(
     return wynik
 
 
+def analiza_wykonania_kary(
+    data_wyroku_k: Optional[date],
+    lata_wykonania: int,
+    data_oceny: date,
+    rodzaj_kary: str = ""
+) -> WynikAnalizyKarne:
+    """
+    Przedawnienie wykonania kary (art. 103 § 1 k.k.) – tytuł wykonawczy karny.
+
+    Terminy liczone od uprawomocnienia się wyroku skazującego:
+    - 30 lat – pozbawienie wolności przekraczające 5 lat albo kara surowsza,
+    - 15 lat – pozbawienie wolności nieprzekraczające 5 lat,
+    - 10 lat – inna kara (grzywna, ograniczenie wolności).
+
+    Brak daty uprawomocnienia -> analiza pomijana (nie błąd).
+    """
+    wynik = WynikAnalizyKarne()
+
+    if data_wyroku_k is None:
+        return wynik
+
+    wynik.zalozenia.append(f"Data uprawomocnienia się wyroku: {_format_data(data_wyroku_k)}")
+    if rodzaj_kary:
+        wynik.zalozenia.append(f"Rodzaj kary: {rodzaj_kary}")
+
+    termin = dodaj_lata(data_wyroku_k, lata_wykonania)
+    if termin is None:
+        wynik.bledy.append("Nie udało się obliczyć terminu przedawnienia wykonania kary.")
+        return wynik
+
+    if termin >= data_oceny:
+        status = "TRWA"
+        komunikacja = (
+            f"Karę można jeszcze wykonać – przedawnienie wykonania upływa {_format_data(termin)} "
+            f"({lata_wykonania} lat od uprawomocnienia)."
+        )
+    else:
+        status = "WYGASŁE"
+        komunikacja = (
+            f"Kary nie można już wykonać – przedawnienie wykonania nastąpiło {_format_data(termin)} "
+            f"({lata_wykonania} lat od uprawomocnienia)."
+        )
+
+    wynik.wyniki.append(WynikObliczenia(
+        nazwa="Przedawnienie wykonania kary (art. 103 § 1 k.k.)",
+        termin=termin,
+        status=status,
+        podstawa_prawna="Art. 103 § 1 k.k.",
+        zalozenia=wynik.zalozenia.copy() + [f"Termin: {lata_wykonania} lat od uprawomocnienia się wyroku"],
+        ostrzezenia=[komunikacja],
+        orientacyjny=True
+    ))
+
+    return wynik
+
+
 def analiza_zatarcia(
     data_wyroku_k: Optional[date],
     data_wykonania: Optional[date],

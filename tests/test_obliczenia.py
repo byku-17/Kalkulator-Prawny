@@ -5,6 +5,7 @@ from obliczenia import (
     analiza_cywilna,
     analiza_deliktowa,
     analiza_karna,
+    analiza_wykonania_kary,
     analiza_zatarcia,
     TypOdpowiedzialnosci,
 )
@@ -453,6 +454,33 @@ def test_karna_oskarzenie_prywatne_art102_plus_5_lat():
     # pierwotny = min(2019-06-01, 2021-01-01) = 2019-06-01; +5 lat = 2024-06-01
     assert w.termin == date(2024, 6, 1)
     assert any("5 lat" in z for z in w.zalozenia)
+
+
+# ─────────────────────────────────────────────
+# TESTY: analiza_wykonania_kary (art. 103 k.k.)
+# ─────────────────────────────────────────────
+def test_wykonanie_kary_mozna_wykonac():
+    """Wykonanie kary: termin w przyszłości -> można jeszcze wykonać."""
+    wynik = analiza_wykonania_kary(date(2020, 1, 1), 30, date(2025, 1, 1))
+    w = wynik.wyniki[0]
+    assert w.termin == date(2050, 1, 1)
+    assert w.status == "TRWA"
+    assert "103" in w.podstawa_prawna
+
+
+def test_wykonanie_kary_przedawnione():
+    """Wykonanie kary: termin w przeszłości -> nie można wykonać."""
+    wynik = analiza_wykonania_kary(date(2010, 1, 1), 10, date(2025, 1, 1))
+    w = wynik.wyniki[0]
+    assert w.termin == date(2020, 1, 1)
+    assert w.status == "WYGASŁE"
+
+
+def test_wykonanie_kary_brak_wyroku():
+    """Brak daty uprawomocnienia -> analiza pomijana (nie błąd)."""
+    wynik = analiza_wykonania_kary(None, 15, date(2025, 1, 1))
+    assert len(wynik.wyniki) == 0
+    assert len(wynik.bledy) == 0
 
 
 def test_karna_brak_wszczecia_ostrzezenie():
