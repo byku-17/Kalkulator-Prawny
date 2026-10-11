@@ -288,8 +288,12 @@ if st.button("Przeprowadź analizę", type="primary"):
             ostrzezenia=["Analiza zatarcia pominięta: brak daty wyroku skazującego."]
         )
 
-    # Zbierz wszystkie daty do karty
-    wszystkie_wyniki = wynik_cywilny.wyniki + wynik_karny.wyniki + wynik_zatarcia.wyniki
+    # Zbierz wszystkie daty do karty (tylko realne terminy —
+    # W_TOKU i BRAK_DANYCH mają termin=data_oceny i nie są deadline'ami)
+    wszystkie_wyniki = [
+        w for w in (wynik_cywilny.wyniki + wynik_karny.wyniki + wynik_zatarcia.wyniki)
+        if w.status not in ("W_TOKU", "BRAK_DANYCH")
+    ]
     wszystkie_wyniki.sort()  # sortowanie po terminie
 
     # Raport błędów i ostrzeżeń z modułów
@@ -387,5 +391,5 @@ if st.button("Przeprowadź analizę", type="primary"):
                     st.success(f"✅ **{w.nazwa}**: {w.termin.strftime('%d.%m.%Y')}")
                 elif w.status == "PRZEDAWNIONE":
                     st.error(f"❌ **{w.nazwa}**: {w.termin.strftime('%d.%m.%Y')}")
-                elif w.status == "W_TOKU":
-                    st.info(f"⏸️ **{w.nazwa}**: Egzekucja w toku")
+                else:
+                    st.info(f"ℹ️ **{w.nazwa}**: {w.termin.strftime('%d.%m.%Y')} [{w.status}]")
